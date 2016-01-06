@@ -36,22 +36,17 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.common.base.Throwables;
 import org.apache.james.jmap.api.AccessTokenManager;
-import org.apache.james.jmap.api.access.AccessToken;
-import org.apache.james.jmap.api.access.exceptions.NotAnUUIDException;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-
 public class AuthenticationFilter implements Filter {
-    
-    private static final Logger LOG = LoggerFactory.getLogger(AuthenticationFilter.class);
+
     public static final String MAILBOX_SESSION = "mailboxSession";
 
+    // eventually moved to AuthenticationStrategiesProvider/Registry (injected into)
     private final AccessTokenManager accessTokenManager;
     private final MailboxManager mailboxManager;
     private final List<AuthenticationStrategy<Optional<String>>> authMethods;
@@ -100,28 +95,8 @@ public class AuthenticationFilter implements Filter {
             return;
         }
 
-//        if (!checkAuthorizationHeader(authHeader)) {
-//            httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-//            return;
-//        }        if (!checkAuthorizationHeader(authHeader)) {
-//            httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-//            return;
-//        }
-
-//        addSessionToRequest(httpRequest, httpResponse, authHeader);
-
         chain.doFilter(httpRequest, response);
     }
-
-//    private void addSessionToRequest(HttpServletRequest httpRequest, HttpServletResponse httpResponse, Optional<String> authHeader,
-//                                     Function<Optional<String>, MailboxSession> sessionCreator) throws IOException {
-//        try {
-//            MailboxSession mailboxSession = sessionCreator.apply(authHeader);
-//            httpRequest.setAttribute(MAILBOX_SESSION, mailboxSession);
-//        } catch (MailboxException e) {
-//            httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-//        }
-//    }
 
     private void addSessionToRequest(HttpServletRequest httpRequest, HttpServletResponse httpResponse, Optional<String> authHeader,
                                      Function<Optional<String>, MailboxSession> sessionCreator) {
@@ -129,66 +104,8 @@ public class AuthenticationFilter implements Filter {
         httpRequest.setAttribute(MAILBOX_SESSION, mailboxSession);
     }
 
-//
-//    @VisibleForTesting MailboxSession createMailboxSession(Optional<String> authHeader) throws BadCredentialsException, MailboxException {
-//        String username = authHeader
-//            .map(AccessToken::fromString)
-//            .map(accessTokenManager::getUsernameFromToken)
-//            .orElseThrow(() -> new BadCredentialsException());
-//        return mailboxManager.createSystemSession(username, LOG);
-//    }
-
-//    private boolean checkAuthorizationHeader(Optional<String> authHeader) throws IOException {
-//        try {
-//            return authHeader
-//                    .map(AccessToken::fromString)
-//                    .map(accessTokenManager::isValid)
-//                    .orElse(false);
-//        } catch (NotAnUUIDException e) {
-//            return false;
-//        }
-//    }
-
     @Override
     public void destroy() {
-    }
-
-    public interface AuthenticationStrategy<R> {
-        MailboxSession createMailboxSession(R requestHeaders)throws MailboxException;
-        boolean checkAuthorizationHeader(R requestHeaders);
-    }
-
-    public static class AccessTokenAuthenticationStrategy implements AuthenticationStrategy<Optional<String>> {
-
-        private final AccessTokenManager accessTokenManager;
-        private final MailboxManager mailboxManager;
-
-        @Inject
-        public AccessTokenAuthenticationStrategy(AccessTokenManager accessTokenManager, MailboxManager mailboxManager) {
-            this.accessTokenManager = accessTokenManager;
-            this.mailboxManager = mailboxManager;
-        }
-
-        @Override
-        public MailboxSession createMailboxSession(Optional<String> authHeader) throws MailboxException {
-            String username = authHeader
-                    .map(AccessToken::fromString)
-                    .map(accessTokenManager::getUsernameFromToken)
-                    .orElseThrow(() -> new BadCredentialsException());
-            return mailboxManager.createSystemSession(username, LOG);
-        }
-
-        @Override
-        public boolean checkAuthorizationHeader(Optional<String> authHeader){
-            try {
-                return authHeader
-                        .map(AccessToken::fromString)
-                        .map(accessTokenManager::isValid)
-                        .orElse(false);
-            } catch (NotAnUUIDException e) {
-                return false;
-            }
-        }
     }
 
 }
