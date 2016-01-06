@@ -18,14 +18,54 @@
  ****************************************************************/
 package org.apache.james.jmap;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+
 public class JMAPConfiguration {
 
-    public final String keystore;
-    public final String secret;
+    public static Builder builder() {
+        return new Builder();
+    }
 
-    public JMAPConfiguration(String keystore, String secret) {
+    public static class Builder {
+        public String keystore;
+        public String secret;
+        public String publicKey;
+
+        private Builder() {
+        }
+
+        public Builder keystore(String keystore) {
+            this.keystore = keystore;
+            return this;
+        }
+
+        public Builder secret(String secret) {
+            this.secret = secret;
+            return this;
+        }
+
+        public Builder publicKey(String publicKey) {
+            this.publicKey = publicKey;
+            return this;
+        }
+
+        public JMAPConfiguration build() {
+            Preconditions.checkState(!Strings.isNullOrEmpty(keystore), "'keystore' is mandatory");
+            Preconditions.checkState(!Strings.isNullOrEmpty(secret), "'secret' is mandatory");
+            return new JMAPConfiguration(keystore, secret, publicKey);
+        }
+    }
+
+    private final String keystore;
+    private final String secret;
+    private final String publicKey;
+
+    @VisibleForTesting JMAPConfiguration(String keystore, String secret, String publicKey) {
         this.keystore = keystore;
         this.secret = secret;
+        this.publicKey = publicKey;
     }
 
     public String getKeystore() {
@@ -34,5 +74,9 @@ public class JMAPConfiguration {
 
     public String getSecret() {
         return secret;
+    }
+
+    public String getPublicKey() {
+        return publicKey;
     }
 }

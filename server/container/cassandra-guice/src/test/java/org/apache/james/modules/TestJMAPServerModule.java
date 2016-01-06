@@ -50,7 +50,11 @@ public class TestJMAPServerModule extends AbstractModule{
     @Provides
     @Singleton
     JMAPConfiguration provideConfiguration() throws FileNotFoundException, ConfigurationException{
-        return new JMAPConfiguration("keystore", "james72laBalle");
+        return JMAPConfiguration.builder()
+                .keystore("keystore")
+                .secret("james72laBalle")
+                .publicKey("publickey")
+                .build();
     }
     
     private static class RandomPortConfiguration implements PortConfiguration {

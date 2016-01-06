@@ -44,9 +44,11 @@ public class JMAPModule extends AbstractModule {
     @Singleton
     JMAPConfiguration provideConfiguration(FileSystem fileSystem) throws FileNotFoundException, ConfigurationException{
         PropertiesConfiguration configuration = getConfiguration(fileSystem);
-        String keystore = configuration.getString("tls.keystoreURL");
-        String secret = configuration.getString("tls.secret");
-        return new JMAPConfiguration(keystore, secret);
+        return JMAPConfiguration.builder()
+                .keystore(configuration.getString("tls.keystoreURL"))
+                .secret(configuration.getString("tls.secret"))
+                .publicKey(configuration.getString("jwt.publickey"))
+                .build();
     }
 
     private PropertiesConfiguration getConfiguration(FileSystem fileSystem) throws FileNotFoundException, ConfigurationException {

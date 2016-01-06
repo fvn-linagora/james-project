@@ -46,7 +46,12 @@ public class JamesSignatureHandlerProvider {
                 return null;
             }
         };
-        JamesSignatureHandler signatureHandler = new JamesSignatureHandler(fileSystem, new JMAPConfiguration("keystore", "james72laBalle"));
+        JamesSignatureHandler signatureHandler = new JamesSignatureHandler(fileSystem, 
+                JMAPConfiguration.builder()
+                    .keystore("keystore")
+                    .secret("james72laBalle")
+                    .publicKey("publickey")
+                    .build());
         signatureHandler.init();
         return signatureHandler;
     }
