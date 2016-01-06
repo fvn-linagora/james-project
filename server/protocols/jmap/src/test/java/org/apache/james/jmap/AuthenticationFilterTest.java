@@ -63,7 +63,7 @@ public class AuthenticationFilterTest {
         accessTokenManager = new AccessTokenManagerImpl(accessTokenRepository);
         MailboxManager mockedMailboxManager = mock(MailboxManager.class);
 
-        testee = new AuthenticationFilter(accessTokenManager, mockedMailboxManager);
+        testee = null; //new AuthenticationFilter(accessTokenManager, mockedMailboxManager);
         filterChain = mock(FilterChain.class);
     }
 

@@ -3,6 +3,8 @@ package org.apache.james.jmap.crypto;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureException;
 
+import javax.inject.Inject;
+
 public class JwtTokenVerifier {
 
     private static final String pubKey = "-----BEGIN PUBLIC KEY-----\n" +
@@ -17,6 +19,7 @@ public class JwtTokenVerifier {
 
     private final DERPublicKeyProvider pubKeyProvider;
 
+    @Inject
     public JwtTokenVerifier(DERPublicKeyProvider pubKeyProvider) {
         this.pubKeyProvider = pubKeyProvider;
     }

@@ -15,7 +15,7 @@ import java.util.Optional;
 
 public class AccessTokenAuthenticationStrategy implements AuthenticationStrategy<Optional<String>> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AuthenticationFilter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(AccessTokenAuthenticationStrategy.class);
 
     private final AccessTokenManager accessTokenManager;
     private final MailboxManager mailboxManager;
@@ -47,22 +47,4 @@ public class AccessTokenAuthenticationStrategy implements AuthenticationStrategy
         }
     }
 
-    public static class JWTAuthenticationStrategy implements AuthenticationStrategy<Optional<String>> {
-        @Override
-        public MailboxSession createMailboxSession(Optional<String> authHeader) throws MailboxException {
-//            String username = authHeader
-//                    .map(AccessToken::fromString)
-//                    .map(accessTokenManager::getUsernameFromToken)
-//                    .orElseThrow(BadCredentialsException::new);
-//            return mailboxManager.createSystemSession(username, LOG);
-            return null;
-        }
-
-        @Override
-        public boolean checkAuthorizationHeader(Optional<String> authHeader) {
-//            return authHeader
-//                    .orElse(false);
-            return false;
-        }
-    }
 }

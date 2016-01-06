@@ -19,7 +19,6 @@
 package org.apache.james.jmap;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -35,29 +34,18 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import com.google.common.base.Throwables;
-import org.apache.james.jmap.api.AccessTokenManager;
-import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class AuthenticationFilter implements Filter {
 
     public static final String MAILBOX_SESSION = "mailboxSession";
 
-    // eventually moved to AuthenticationStrategiesProvider/Registry (injected into)
-    private final AccessTokenManager accessTokenManager;
-    private final MailboxManager mailboxManager;
     private final List<AuthenticationStrategy<Optional<String>>> authMethods;
 
     @Inject
-    public AuthenticationFilter(AccessTokenManager accessTokenManager, MailboxManager mailboxManager) {
-        this.accessTokenManager = accessTokenManager;
-        this.mailboxManager = mailboxManager;
-
-        authMethods = new ArrayList<>();
-        authMethods.add(new AccessTokenAuthenticationStrategy(accessTokenManager, mailboxManager));
+    public AuthenticationFilter(List<AuthenticationStrategy<Optional<String>>> authMethods) {
+        this.authMethods = authMethods;
     }
 
     @Override
