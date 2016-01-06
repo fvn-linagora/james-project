@@ -66,12 +66,12 @@ public class JMAPConfigurationTest {
 
     @Test
     public void buildShouldWork() {
-        JMAPConfiguration expectedJMAPConfiguration = new JMAPConfiguration("keystore", "secret", "publicKey");
+        JMAPConfiguration expectedJMAPConfiguration = new JMAPConfiguration("keystore", "secret", "file://conf/jwt_publickey");
 
         JMAPConfiguration jmapConfiguration = JMAPConfiguration.builder()
             .keystore("keystore")
             .secret("secret")
-            .publicKey("publicKey")
+            .jwtPublicKey("file://conf/jwt_publickey")
             .build();
         assertThat(jmapConfiguration).isEqualToComparingFieldByField(expectedJMAPConfiguration);
     }

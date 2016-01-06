@@ -19,12 +19,15 @@
 package org.apache.james.jmap;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
+import org.apache.commons.io.FileUtils;
 import org.apache.james.filesystem.api.FileSystem;
 import org.apache.james.jmap.methods.RequestHandler;
 
+import com.google.common.base.Strings;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -42,16 +45,23 @@ public class JMAPModule extends AbstractModule {
 
     @Provides
     @Singleton
-    JMAPConfiguration provideConfiguration(FileSystem fileSystem) throws FileNotFoundException, ConfigurationException{
+    JMAPConfiguration provideConfiguration(FileSystem fileSystem) throws ConfigurationException, IOException{
         PropertiesConfiguration configuration = getConfiguration(fileSystem);
         return JMAPConfiguration.builder()
                 .keystore(configuration.getString("tls.keystoreURL"))
                 .secret(configuration.getString("tls.secret"))
-                .publicKey(configuration.getString("jwt.publickey"))
+                .jwtPublicKey(loadPublicKey(fileSystem, configuration.getString("jwt.publickey.url")))
                 .build();
     }
 
     private PropertiesConfiguration getConfiguration(FileSystem fileSystem) throws FileNotFoundException, ConfigurationException {
         return new PropertiesConfiguration(fileSystem.getFile(FileSystem.FILE_PROTOCOL_AND_CONF + "jmap.properties"));
+    }
+
+    private String loadPublicKey(FileSystem fileSystem, String jwtPublickeyUrl) throws FileNotFoundException, IOException {
+        if (!Strings.isNullOrEmpty(jwtPublickeyUrl)) {
+            return FileUtils.readFileToString(fileSystem.getFile(jwtPublickeyUrl));
+        }
+        return null;
     }
 }

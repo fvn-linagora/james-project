@@ -31,7 +31,7 @@ public class JMAPConfiguration {
     public static class Builder {
         public String keystore;
         public String secret;
-        public String publicKey;
+        public String jwtPublicKey;
 
         private Builder() {
         }
@@ -46,26 +46,26 @@ public class JMAPConfiguration {
             return this;
         }
 
-        public Builder publicKey(String publicKey) {
-            this.publicKey = publicKey;
+        public Builder jwtPublicKey(String jwtPublicKey) {
+            this.jwtPublicKey = jwtPublicKey;
             return this;
         }
 
         public JMAPConfiguration build() {
             Preconditions.checkState(!Strings.isNullOrEmpty(keystore), "'keystore' is mandatory");
             Preconditions.checkState(!Strings.isNullOrEmpty(secret), "'secret' is mandatory");
-            return new JMAPConfiguration(keystore, secret, publicKey);
+            return new JMAPConfiguration(keystore, secret, jwtPublicKey);
         }
     }
 
     private final String keystore;
     private final String secret;
-    private final String publicKey;
+    private final String jwtPublicKey;
 
-    @VisibleForTesting JMAPConfiguration(String keystore, String secret, String publicKey) {
+    @VisibleForTesting JMAPConfiguration(String keystore, String secret, String jwtPublicKey) {
         this.keystore = keystore;
         this.secret = secret;
-        this.publicKey = publicKey;
+        this.jwtPublicKey = jwtPublicKey;
     }
 
     public String getKeystore() {
@@ -76,7 +76,7 @@ public class JMAPConfiguration {
         return secret;
     }
 
-    public String getPublicKey() {
-        return publicKey;
+    public String getJwtPublicKey() {
+        return jwtPublicKey;
     }
 }

@@ -50,7 +50,7 @@ public class JamesSignatureHandlerProvider {
                 JMAPConfiguration.builder()
                     .keystore("keystore")
                     .secret("james72laBalle")
-                    .publicKey("publickey")
+                    .jwtPublicKey("publicKey")
                     .build());
         signatureHandler.init();
         return signatureHandler;
