@@ -18,8 +18,12 @@
  ****************************************************************/
 package org.apache.james.jmap;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Provides;
 import org.apache.james.jmap.api.AccessTokenManager;
 import org.apache.james.jmap.api.ContinuationTokenManager;
 import org.apache.james.jmap.api.access.AccessTokenRepository;
@@ -49,4 +53,13 @@ public class JMAPCommonModule extends AbstractModule {
         bind(AccessTokenManager.class).to(AccessTokenManagerImpl.class);
     }
 
+    @Provides
+    public List<AuthenticationStrategy<Optional<String>>> authStrategies(
+            AccessTokenAuthenticationStrategy accessTokenAuthenticationStrategy,
+            JWTAuthenticationStrategy jwtAuthenticationStrategy) {
+
+        return ImmutableList.of(
+                jwtAuthenticationStrategy,
+                accessTokenAuthenticationStrategy);
+    }
 }
