@@ -39,17 +39,17 @@ public class JMAPServer implements Configurable {
     private final JettyHttpServer server;
 
     @Inject
-    private JMAPServer(PortConfiguration portConfiguration, 
-            AuthenticationServlet authenticationServlet, JMAPServlet jmapServlet,
-            AuthenticationFilter authenticationFilter) {
+    private JMAPServer(PortConfiguration portConfiguration,
+                       AuthenticationServlet authenticationServlet, JMAPServlet jmapServlet,
+                       AuthenticationFilter authenticationFilter) {
 
         server = JettyHttpServer.create(
                 configurationBuilderFor(portConfiguration)
-                .serve("/authentication").with(authenticationServlet)
-                .filter("/authentication").with(new BypassOnPostFilter(authenticationFilter))
-                .serve("/jmap").with(jmapServlet)
-                .filter("/jmap").with(authenticationFilter)
-                .build());
+                        .serve("/authentication").with(authenticationServlet)
+                        .filter("/authentication").with(new AllowAllCrossOriginRequests(new BypassOnPostFilter(authenticationFilter)))
+                        .serve("/jmap").with(jmapServlet)
+                        .filter("/jmap").with(new AllowAllCrossOriginRequests(authenticationFilter))
+                        .build());
     }
 
     private Builder configurationBuilderFor(PortConfiguration portConfiguration) {
@@ -83,5 +83,4 @@ public class JMAPServer implements Configurable {
     public int getPort() {
         return server.getPort();
     }
-
 }

@@ -18,43 +18,29 @@
  ****************************************************************/
 package org.apache.james.jmap;
 
-import java.io.IOException;
-import java.util.Optional;
+import org.apache.james.mailbox.MailboxSession;
+import org.eclipse.jetty.util.log.Log;
+import org.eclipse.jetty.util.log.Logger;
 
 import javax.inject.Inject;
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
+import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-import org.apache.james.jmap.api.AccessTokenManager;
-import org.apache.james.jmap.api.access.AccessToken;
-import org.apache.james.jmap.api.access.exceptions.NotAnUUIDException;
-import org.apache.james.mailbox.MailboxManager;
-import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.exception.BadCredentialsException;
-import org.apache.james.mailbox.exception.MailboxException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.annotations.VisibleForTesting;
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Stream;
 
 public class AuthenticationFilter implements Filter {
-    
-    private static final Logger LOG = LoggerFactory.getLogger(AuthenticationFilter.class);
-    public static final String MAILBOX_SESSION = "mailboxSession";
 
-    private final AccessTokenManager accessTokenManager;
-    private final MailboxManager mailboxManager;
+    public static final String MAILBOX_SESSION = "mailboxSession";
+    private static final Logger LOG = Log.getLogger(AuthenticationFilter.class);
+    public static final String AUTHORIZATION_HEADERS = "Authorization";
+
+    private final List<AuthenticationStrategy<Stream<String>>> authMethods;
 
     @Inject
-    public AuthenticationFilter(AccessTokenManager accessTokenManager, MailboxManager mailboxManager) {
-        this.accessTokenManager = accessTokenManager;
-        this.mailboxManager = mailboxManager;
+    public AuthenticationFilter(List<AuthenticationStrategy<Stream<String>>> authMethods) {
+        this.authMethods = authMethods;
     }
 
     @Override
@@ -66,43 +52,54 @@ public class AuthenticationFilter implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
 
-        Optional<String> authHeader = Optional.ofNullable(httpRequest.getHeader("Authorization"));
-        if (!checkAuthorizationHeader(authHeader)) {
+        // Bypass auth pipeline for request with method/verb OPTIONS
+        boolean isAuthorized = "options".equals(httpRequest.getMethod().trim().toLowerCase());
+
+        Optional<HttpServletRequest> sessionSetInRequest = authMethods.stream()
+                .filter(auth -> auth.checkAuthorizationHeader(getAuthHeaders(httpRequest)))
+                .findFirst()
+                .map(auth -> addSessionToRequest(httpRequest, createSession(auth, getAuthHeaders(httpRequest))));
+
+        if (!isAuthorized && !sessionSetInRequest.isPresent()) {
             httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
 
-        addSessionToRequest(httpRequest, httpResponse, authHeader);
-
         chain.doFilter(httpRequest, response);
     }
 
-    private void addSessionToRequest(HttpServletRequest httpRequest, HttpServletResponse httpResponse, Optional<String> authHeader) throws IOException {
-        try {
-            MailboxSession mailboxSession = createMailboxSession(authHeader);
-            httpRequest.setAttribute(MAILBOX_SESSION, mailboxSession);
-        } catch (MailboxException e) {
-            httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-        }
+    private Stream<String> getAuthHeaders(HttpServletRequest httpRequest) {
+        Enumeration<String> authHeadersIterator = httpRequest.getHeaders(AUTHORIZATION_HEADERS);
+
+        return authHeadersIterator != null && authHeadersIterator.hasMoreElements() ? Collections.list(authHeadersIterator).stream() : Stream.of();
     }
 
-    @VisibleForTesting MailboxSession createMailboxSession(Optional<String> authHeader) throws BadCredentialsException, MailboxException {
-        String username = authHeader
-            .map(AccessToken::fromString)
-            .map(accessTokenManager::getUsernameFromToken)
-            .orElseThrow(() -> new BadCredentialsException());
-        return mailboxManager.createSystemSession(username, LOG);
+    private HttpServletRequest addSessionToRequest(HttpServletRequest httpRequest, Optional<MailboxSession> mailboxSession) {
+        if (mailboxSession.isPresent()) {
+
+            httpRequest.setAttribute(MAILBOX_SESSION, mailboxSession.get());
+        }
+        return httpRequest;
     }
 
-    private boolean checkAuthorizationHeader(Optional<String> authHeader) throws IOException {
-        try {
-            return authHeader
-                    .map(AccessToken::fromString)
-                    .map(accessTokenManager::isValid)
-                    .orElse(false);
-        } catch (NotAnUUIDException e) {
-            return false;
-        }
+    private Optional<MailboxSession> createSession(AuthenticationStrategy<Stream<String>> authenticationMethod,
+                                                   Stream<String> authorizationHeaders) {
+
+        return authenticationMethod.createMailboxSession(authorizationHeaders);
+    }
+
+    private AuthenticationStrategy<Optional<String>> noAuthentication() {
+        return new AuthenticationStrategy<Optional<String>>() {
+            @Override
+            public Optional<MailboxSession> createMailboxSession(Optional<String> requestHeaders) {
+                return Optional.empty();
+            }
+
+            @Override
+            public boolean checkAuthorizationHeader(Optional<String> requestHeaders) {
+                return false;
+            }
+        };
     }
 
     @Override
