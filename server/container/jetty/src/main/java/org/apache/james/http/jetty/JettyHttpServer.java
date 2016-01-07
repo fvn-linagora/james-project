@@ -20,12 +20,11 @@
 package org.apache.james.http.jetty;
 
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.EnumSet;
 import java.util.function.BiConsumer;
 
-import javax.servlet.DispatcherType;
-import javax.servlet.Filter;
-import javax.servlet.Servlet;
+import javax.servlet.*;
 
 import org.eclipse.jetty.server.HandlerContainer;
 import org.eclipse.jetty.server.Server;
@@ -75,7 +74,8 @@ public class JettyHttpServer implements Closeable {
     }
 
     private void ConfigureCORS(ServletHandler servletHandler) {
-        FilterHolder holder = new FilterHolder(CrossOriginFilter.class);
+        // FilterHolder holder = new FilterHolder(CrossOriginFilter.class);
+        FilterHolder holder = new FilterHolder(MyCrossOriginFilter.class);
         holder.setInitParameter(CrossOriginFilter.ALLOWED_ORIGINS_PARAM, "*");
         holder.setInitParameter(CrossOriginFilter.ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, "*");
         holder.setInitParameter(CrossOriginFilter.ALLOWED_METHODS_PARAM, "GET,POST,HEAD");
@@ -129,5 +129,12 @@ public class JettyHttpServer implements Closeable {
             Throwables.propagate(e);
         }
     }
-    
+
+    private static class MyCrossOriginFilter extends CrossOriginFilter {
+        @Override
+        public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+            System.out.println("Youpi CORS ! ");
+            super.doFilter(request, response, chain);
+        }
+    }
 }
