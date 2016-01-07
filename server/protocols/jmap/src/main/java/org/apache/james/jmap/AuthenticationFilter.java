@@ -69,7 +69,7 @@ public class AuthenticationFilter implements Filter {
             if (authMethod.checkAuthorizationHeader(authHeader)) {
                 isAuthorized = true;
 
-                addSessionToRequest(httpRequest, httpResponse, authHeader, h -> {
+                addSessionToRequest(httpRequest, authHeader, h -> {
                     MailboxSession result = null;
                     try { result = authMethod.createMailboxSession(h); }
                     catch (MailboxException e) { Throwables.propagate(e); }
@@ -86,7 +86,7 @@ public class AuthenticationFilter implements Filter {
         chain.doFilter(httpRequest, response);
     }
 
-    private void addSessionToRequest(HttpServletRequest httpRequest, HttpServletResponse httpResponse, Optional<String> authHeader,
+    private void addSessionToRequest(HttpServletRequest httpRequest, Optional<String> authHeader,
                                      Function<Optional<String>, MailboxSession> sessionCreator) {
         MailboxSession mailboxSession = sessionCreator.apply(authHeader);
         httpRequest.setAttribute(MAILBOX_SESSION, mailboxSession);

@@ -27,14 +27,17 @@ import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import javax.servlet.Servlet;
 
+import org.eclipse.jetty.server.HandlerContainer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.FilterHolder;
+import org.eclipse.jetty.servlet.FilterMapping;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
+import org.eclipse.jetty.servlets.CrossOriginFilter;
 
 public class JettyHttpServer implements Closeable {
     
@@ -61,14 +64,30 @@ public class JettyHttpServer implements Closeable {
 
     private ServletHandler buildServletHandler(Configuration configuration) {
         ServletHandler servletHandler = new ServletHandler();
+
+        ConfigureCORS(servletHandler);
         BiConsumer<String, ServletHolder> addServletMapping = (path, servletHolder) -> servletHandler.addServletWithMapping(servletHolder, path);
         BiConsumer<String, FilterHolder> addFilterMapping = (path, filterHolder) -> servletHandler.addFilterWithMapping(filterHolder, path, EnumSet.of(DispatcherType.REQUEST));
         Maps.transformEntries(configuration.getMappings(), this::toServletHolder).forEach(addServletMapping);
         Maps.transformEntries(configuration.getFilters(), this::toFilterHolder).forEach(addFilterMapping);
+
         return servletHandler;
     }
 
-    
+    private void ConfigureCORS(ServletHandler servletHandler) {
+        FilterHolder holder = new FilterHolder(CrossOriginFilter.class);
+        holder.setInitParameter(CrossOriginFilter.ALLOWED_ORIGINS_PARAM, "*");
+        holder.setInitParameter(CrossOriginFilter.ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, "*");
+        holder.setInitParameter(CrossOriginFilter.ALLOWED_METHODS_PARAM, "GET,POST,HEAD");
+        holder.setInitParameter(CrossOriginFilter.ALLOWED_HEADERS_PARAM, "X-Requested-With,Content-Type,Accept,Origin");
+        holder.setName("cross-origin");
+        FilterMapping fm = new FilterMapping();
+        fm.setFilterName("cross-origin");
+        fm.setPathSpec("*");
+        servletHandler.addFilter(holder, fm );
+    }
+
+
     @SuppressWarnings("unchecked")
     private ServletHolder toServletHolder(String path, Object value) {
         if (value instanceof Servlet) {
