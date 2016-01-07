@@ -37,6 +37,8 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
+import org.eclipse.jetty.util.log.Log;
+import org.eclipse.jetty.util.log.Logger;
 
 public class JettyHttpServer implements Closeable {
     
@@ -81,10 +83,12 @@ public class JettyHttpServer implements Closeable {
         holder.setInitParameter(CrossOriginFilter.ALLOWED_METHODS_PARAM, "GET,POST,HEAD");
         holder.setInitParameter(CrossOriginFilter.ALLOWED_HEADERS_PARAM, "X-Requested-With,Content-Type,Accept,Origin");
         holder.setName("cross-origin");
-        FilterMapping fm = new FilterMapping();
-        fm.setFilterName("cross-origin");
-        fm.setPathSpec("*");
-        servletHandler.addFilter(holder, fm );
+//        FilterMapping fm = new FilterMapping();
+//        fm.setFilterName("cross-origin");
+//        fm.setPathSpec("*");
+        // servletHandler.addFilter(holder, fm );
+        servletHandler.addFilterWithMapping(holder, "/jmap", EnumSet.of(DispatcherType.REQUEST));
+        servletHandler.addFilterWithMapping(holder, "/authentication", EnumSet.of(DispatcherType.REQUEST));
     }
 
 
@@ -130,10 +134,14 @@ public class JettyHttpServer implements Closeable {
         }
     }
 
-    private static class MyCrossOriginFilter extends CrossOriginFilter {
+    public static class MyCrossOriginFilter extends CrossOriginFilter {
+
+        private static final Logger LOG = Log.getLogger(MyCrossOriginFilter.class);
+
         @Override
         public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-            System.out.println("Youpi CORS ! ");
+            // System.out.println("Youpi CORS ! ");
+            LOG.info("MyCrossOriginFilter.doFilter passed !");
             super.doFilter(request, response, chain);
         }
     }
