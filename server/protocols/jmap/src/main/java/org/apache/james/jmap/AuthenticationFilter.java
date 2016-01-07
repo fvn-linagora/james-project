@@ -20,6 +20,7 @@ package org.apache.james.jmap;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -69,8 +70,14 @@ public class AuthenticationFilter implements Filter {
 //                .map(m -> addSessionToRequest(httpRequest, httpResponse, authHeader,
 //                        h -> m.createMailboxSession(authHeader)))
 
-        boolean isAuthorized = false;
-        for (AuthenticationStrategy<Optional<String>> authMethod: authMethods) {
+        // Bypass auth pipeline for request with method/verb OPTIONS
+        boolean isAuthorized = httpRequest.getMethod().trim().toLowerCase() == "options";
+
+        ListIterator<AuthenticationStrategy<Optional<String>>> authenticationMethodsIterator = authMethods.listIterator();
+        while(!isAuthorized && authenticationMethodsIterator.hasNext())
+        {
+            AuthenticationStrategy<Optional<String>> authMethod = authenticationMethodsIterator.next();
+
             if (authMethod.checkAuthorizationHeader(authHeader)) {
                 isAuthorized = true;
 
@@ -80,9 +87,22 @@ public class AuthenticationFilter implements Filter {
                     catch (MailboxException e) { Throwables.propagate(e); }
                     return result;
                 });
-                break;
             }
         }
+
+//        for (AuthenticationStrategy<Optional<String>> authMethod: authMethods) {
+//            if (authMethod.checkAuthorizationHeader(authHeader)) {
+//                isAuthorized = true;
+//
+//                addSessionToRequest(httpRequest, authHeader, h -> {
+//                    MailboxSession result = null;
+//                    try { result = authMethod.createMailboxSession(h); }
+//                    catch (MailboxException e) { Throwables.propagate(e); }
+//                    return result;
+//                });
+//                break;
+//            }
+//        }
         if (! isAuthorized) {
             httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return;
