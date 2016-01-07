@@ -33,6 +33,7 @@ import org.apache.james.backends.cassandra.EmbeddedCassandra;
 import org.apache.james.jmap.model.ContinuationToken;
 import org.apache.james.jmap.utils.ZonedDateTimeProvider;
 import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
+import org.eclipse.jetty.servlets.CrossOriginFilter;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -360,6 +361,58 @@ public abstract class JMAPAuthenticationTest {
                 .get("/authentication")
                 .then()
                 .statusCode(401);
+    }
+
+    @Test
+    public void optionsRequestsShouldNeverRequireAuthentication() {
+        given()
+                .when()
+                .options("/authentication")
+                .then()
+                .statusCode(200);
+    }
+
+    @Test
+    public void anyRequestShouldProvideCrossOriginHeadersInResponseWhenOriginHeaderProvided() {
+        String ORIGIN_HEADER = "Origin";
+        given()
+                .headers(ORIGIN_HEADER, "restassured-tests")
+                .when()
+                .options("/authentication")
+                .then()
+                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, notNullValue())
+                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER, notNullValue())
+                .statusCode(200);
+    }
+
+    @Test
+    public void anyRequestShouldNotReturnCrossOriginHeadersWhenMissingRequestOriginHeaderSent() {
+        given()
+                .when()
+                .options("/authentication")
+                .then()
+                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, nullValue())
+                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER, nullValue())
+                .statusCode(200);
+    }
+
+    @Test
+    public void getRequestShouldProvideCrossOriginHeadersInResponse() {
+        String ORIGIN_HEADER = "Origin";
+        String token = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIn0.T04BTk" +
+                "LXkJj24coSZkK13RfG25lpvmSl2MJ7N10KpBk9_-95EGYZdog-BDAn3PJzqVw52z-Bwjh4VOj1-j7cURu0cT4jXehhUrlCxS4n7QHZ" +
+                "DN_bsEYGu7KzjWTpTsUiHe-rN7izXVFxDGG1TGwlmBCBnPW-EFCf9ylUsJi0r2BKNdaaPRfMIrHptH1zJBkkUziWpBN1RNLjmvlAUf" +
+                "49t1Tbv21ZqYM5Ht2vrhJWczFbuC-TD-8zJkXhjTmA1GVgomIX5dx1cH-dZX1wANNmshUJGHgepWlPU-5VIYxPEhb219RMLJIELMY2" +
+                "qNOR8Q31ydinyqzXvCSzVJOf6T60-w";
+
+        given()
+                .header(ORIGIN_HEADER, "restassured-tests")
+                .header("Authorization", "Bearer " + token)
+                .when()
+                .post("/jmap")
+                .then()
+                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, notNullValue())
+                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER, notNullValue());
     }
 
     @Test

@@ -13,6 +13,7 @@ import java.util.Optional;
 public class JWTAuthenticationStrategy implements AuthenticationStrategy<Optional<String>> {
 
     private static final Logger LOG = LoggerFactory.getLogger(JWTAuthenticationStrategy.class);
+    public static final String AUTHORIZATION_HEADER_PREFIX = "Bearer ";
     private final JwtTokenVerifier tokenManager;
     private final MailboxManager mailboxManager;
 
@@ -31,13 +32,13 @@ public class JWTAuthenticationStrategy implements AuthenticationStrategy<Optiona
     @Override
     public boolean checkAuthorizationHeader(Optional<String> authHeader) {
          return extractToken(authHeader)
-                 .map(t -> tokenManager.verify(t))
+                 .map(tokenManager::verify)
                  .orElse(false);
     }
 
     private Optional<String> extractToken(Optional<String> authHeader) {
         return authHeader
-                .filter(h -> h.startsWith("Bearer "))
-                .map(s -> s.substring("Bearer ".length()));
+                .filter(h -> h.startsWith(AUTHORIZATION_HEADER_PREFIX))
+                .map(s -> s.substring(AUTHORIZATION_HEADER_PREFIX.length()));
     }
 }

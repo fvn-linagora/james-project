@@ -11,7 +11,7 @@ import java.util.*;
 
 public class CORSWhitelistFilter extends CrossOriginFilter {
 
-    // private static final Logger LOG = Log.getLogger(CORSWhitelistFilter.class);
+     private static final Logger LOG = Log.getLogger(CORSWhitelistFilter.class);
     private final Filter decoratedFilter;
 
     public CORSWhitelistFilter(Filter originalFilter) {
@@ -25,12 +25,24 @@ public class CORSWhitelistFilter extends CrossOriginFilter {
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+        LOG.info("applying CrossOriginFilter filter");
+        super.doFilter(request, response, new NullFilterChain());
+        LOG.info("calling next filter ... ");
         decoratedFilter.doFilter(request, response, chain);
     }
 
     @Override
     public void destroy() {
         decoratedFilter.destroy();
+    }
+
+
+    public static class NullFilterChain implements FilterChain {
+
+        @Override
+        public void doFilter(ServletRequest request, ServletResponse response) throws IOException, ServletException {
+            return;
+        }
     }
 
     public static class CORSFilterConfig implements FilterConfig {
@@ -76,7 +88,7 @@ public class CORSWhitelistFilter extends CrossOriginFilter {
 
         @Override
         public String getInitParameter(String name) {
-            if (name == null || name.trim() == "" || !initParameters.containsKey(name))
+            if (name == null || Objects.equals(name.trim(), "") || !initParameters.containsKey(name))
                 return null;
             return initParameters.get(name);
         }
