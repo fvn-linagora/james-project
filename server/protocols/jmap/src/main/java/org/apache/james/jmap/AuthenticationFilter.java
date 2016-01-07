@@ -36,10 +36,13 @@ import javax.servlet.http.HttpServletResponse;
 import com.google.common.base.Throwables;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.eclipse.jetty.util.log.Log;
+import org.eclipse.jetty.util.log.Logger;
 
 public class AuthenticationFilter implements Filter {
 
     public static final String MAILBOX_SESSION = "mailboxSession";
+    private static final Logger LOG = Log.getLogger(AuthenticationFilter.class);
 
     private final List<AuthenticationStrategy<Optional<String>>> authMethods;
 
@@ -58,6 +61,8 @@ public class AuthenticationFilter implements Filter {
         HttpServletResponse httpResponse = (HttpServletResponse) response;
 
         Optional<String> authHeader = Optional.ofNullable(httpRequest.getHeader("Authorization"));
+
+        LOG.info("AuthenticationFilter.doFilter crossed ...");
 
 //        authMethods.stream()
 //                .filter(m -> m.checkAuthorizationHeader(authHeader))
