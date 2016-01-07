@@ -50,7 +50,7 @@ public class JMAPModule extends AbstractModule {
         return JMAPConfiguration.builder()
                 .keystore(configuration.getString("tls.keystoreURL"))
                 .secret(configuration.getString("tls.secret"))
-                .jwtPublicKey(loadPublicKey(fileSystem, configuration.getString("jwt.publickey.url")))
+                .jwtPublicKeyPem(loadPublicKey(fileSystem, configuration.getString("jwt.publickey.url")))
                 .build();
     }
 

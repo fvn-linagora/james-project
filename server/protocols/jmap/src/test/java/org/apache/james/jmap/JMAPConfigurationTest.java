@@ -22,6 +22,8 @@ package org.apache.james.jmap;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.Optional;
+
 import org.junit.Test;
 
 public class JMAPConfigurationTest {
@@ -66,12 +68,12 @@ public class JMAPConfigurationTest {
 
     @Test
     public void buildShouldWork() {
-        JMAPConfiguration expectedJMAPConfiguration = new JMAPConfiguration("keystore", "secret", "file://conf/jwt_publickey");
+        JMAPConfiguration expectedJMAPConfiguration = new JMAPConfiguration("keystore", "secret", Optional.of("file://conf/jwt_publickey"));
 
         JMAPConfiguration jmapConfiguration = JMAPConfiguration.builder()
             .keystore("keystore")
             .secret("secret")
-            .jwtPublicKey("file://conf/jwt_publickey")
+            .jwtPublicKeyPem("file://conf/jwt_publickey")
             .build();
         assertThat(jmapConfiguration).isEqualToComparingFieldByField(expectedJMAPConfiguration);
     }
