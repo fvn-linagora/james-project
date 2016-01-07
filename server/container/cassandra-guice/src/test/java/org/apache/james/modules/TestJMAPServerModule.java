@@ -53,7 +53,6 @@ public class TestJMAPServerModule extends AbstractModule{
         return JMAPConfiguration.builder()
                 .keystore("keystore")
                 .secret("james72laBalle")
-                .jwtPublicKeyPem("publicKey")
                 .build();
     }
     
