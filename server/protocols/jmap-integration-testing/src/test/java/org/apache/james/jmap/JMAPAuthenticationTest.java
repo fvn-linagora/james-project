@@ -33,6 +33,7 @@ import org.apache.james.backends.cassandra.EmbeddedCassandra;
 import org.apache.james.jmap.model.ContinuationToken;
 import org.apache.james.jmap.utils.ZonedDateTimeProvider;
 import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
+import org.eclipse.jetty.servlets.CrossOriginFilter;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -50,7 +51,9 @@ public abstract class JMAPAuthenticationTest {
     private static final ZonedDateTime newDate = ZonedDateTime.parse("2011-12-03T10:16:30+01:00", DateTimeFormatter.ISO_OFFSET_DATE_TIME);
     private static final ZonedDateTime afterExpirationDate = ZonedDateTime.parse("2011-12-03T10:30:31+01:00", DateTimeFormatter.ISO_OFFSET_DATE_TIME);
 
-    
+    private static final String ORIGIN_HEADER = "Origin";
+    private static final String ORIGIN_HEADER_VALUE = "restassured-tests";
+
     private TemporaryFolder temporaryFolder = new TemporaryFolder();
     private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch(temporaryFolder);
     private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
@@ -360,6 +363,61 @@ public abstract class JMAPAuthenticationTest {
                 .get("/authentication")
                 .then()
                 .statusCode(401);
+    }
+
+    @Test
+    public void optionsRequestsShouldNeverRequireAuthentication() {
+        given()
+                .when()
+                .options("/authentication")
+                .then()
+                .statusCode(200);
+    }
+
+    @Test
+    @Ignore // until CORS filter is correctly implemented !
+    public void anyRequestShouldProvideCrossOriginHeadersInResponseWhenOriginHeaderProvided() {
+        given()
+                .headers(ORIGIN_HEADER, ORIGIN_HEADER_VALUE)
+                .when()
+                .options("/authentication")
+                .then()
+                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, containsString(ORIGIN_HEADER_VALUE))
+                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER, notNullValue())
+                .statusCode(200);
+    }
+
+    @Test
+    @Ignore // until CORS filter is correctly implemented !
+    public void anyRequestShouldNotReturnCrossOriginHeadersWhenMissingRequestOriginHeaderSent() {
+        given()
+                .when()
+                .options("/authentication")
+                .then()
+                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER, nullValue())
+                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, nullValue())
+                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_METHODS_HEADER, nullValue())
+                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_HEADERS_HEADER, nullValue())
+                .header(CrossOriginFilter.ACCESS_CONTROL_MAX_AGE_HEADER, nullValue())
+
+        .statusCode(200);
+    }
+
+    @Test
+    @Ignore // until CORS filter is correctly implemented !
+    public void preflightRequestShouldReturnCorrectRequiredAccessControlHeaders() {
+        String ORIGIN_HEADER = "Origin";
+        String ORIGIN_HEADER_VALUE = "restassured-tests";
+        given()
+                .header(ORIGIN_HEADER, ORIGIN_HEADER_VALUE)
+                .header(CrossOriginFilter.ACCESS_CONTROL_REQUEST_METHOD_HEADER, "POST")
+                .header(CrossOriginFilter.ACCESS_CONTROL_REQUEST_HEADERS_HEADER, ORIGIN_HEADER + ",")
+                .when()
+                .options("/jmap")
+                .then()
+                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, containsString(ORIGIN_HEADER_VALUE))
+                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_METHODS_HEADER, containsString("POST"))
+                .statusCode(200);
     }
 
     @Test

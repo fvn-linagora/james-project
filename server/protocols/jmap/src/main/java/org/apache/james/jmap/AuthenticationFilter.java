@@ -20,6 +20,8 @@ package org.apache.james.jmap;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -33,13 +35,17 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.common.base.Throwables;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.eclipse.jetty.util.log.Log;
+import org.eclipse.jetty.util.log.Logger;
+
+import com.google.common.base.Throwables;
 
 public class AuthenticationFilter implements Filter {
 
     public static final String MAILBOX_SESSION = "mailboxSession";
+    private static final Logger LOG = Log.getLogger(AuthenticationFilter.class);
 
     private final List<AuthenticationStrategy<Optional<String>>> authMethods;
 
@@ -59,25 +65,29 @@ public class AuthenticationFilter implements Filter {
 
         Optional<String> authHeader = Optional.ofNullable(httpRequest.getHeader("Authorization"));
 
-//        authMethods.stream()
-//                .filter(m -> m.checkAuthorizationHeader(authHeader))
-//                .map(m -> addSessionToRequest(httpRequest, httpResponse, authHeader,
-//                        h -> m.createMailboxSession(authHeader)))
+        LOG.info("AuthenticationFilter.doFilter crossed ...");
 
-        boolean isAuthorized = false;
-        for (AuthenticationStrategy<Optional<String>> authMethod: authMethods) {
+        // Bypass auth pipeline for request with method/verb OPTIONS
+        boolean isAuthorized = "options".equals(httpRequest.getMethod().trim().toLowerCase());
+
+        ListIterator<AuthenticationStrategy<Optional<String>>> authenticationMethodsIterator = authMethods.listIterator();
+        while(!isAuthorized && authenticationMethodsIterator.hasNext())
+        {
+            AuthenticationStrategy<Optional<String>> authMethod = authenticationMethodsIterator.next();
+
             if (authMethod.checkAuthorizationHeader(authHeader)) {
                 isAuthorized = true;
+                LOG.debug("request was authorized via " + authMethod.getClass().getCanonicalName());
 
-                addSessionToRequest(httpRequest, httpResponse, authHeader, h -> {
+                addSessionToRequest(httpRequest, authHeader, h -> {
                     MailboxSession result = null;
                     try { result = authMethod.createMailboxSession(h); }
                     catch (MailboxException e) { Throwables.propagate(e); }
                     return result;
                 });
-                break;
             }
         }
+
         if (! isAuthorized) {
             httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return;
@@ -86,7 +96,7 @@ public class AuthenticationFilter implements Filter {
         chain.doFilter(httpRequest, response);
     }
 
-    private void addSessionToRequest(HttpServletRequest httpRequest, HttpServletResponse httpResponse, Optional<String> authHeader,
+    private void addSessionToRequest(HttpServletRequest httpRequest, Optional<String> authHeader,
                                      Function<Optional<String>, MailboxSession> sessionCreator) {
         MailboxSession mailboxSession = sessionCreator.apply(authHeader);
         httpRequest.setAttribute(MAILBOX_SESSION, mailboxSession);
