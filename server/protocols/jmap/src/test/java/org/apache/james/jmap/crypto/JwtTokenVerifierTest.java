@@ -18,7 +18,10 @@
  ****************************************************************/
 package org.apache.james.jmap.crypto;
 
+import org.apache.james.jmap.JMAPConfiguration;
 import org.junit.Test;
+
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -33,7 +36,10 @@ public class JwtTokenVerifierTest {
                 "t1Tbv21ZqYM5Ht2vrhJWczFbuC-TD-8zJkXhjTmA1GVgomIX5dx1cH-dZX1wANNmshUJGHgepWlPU-5VIYxPEhb219RMLJIELMY2qN" +
                 "OR8Q31ydinyqzXvCSzVJOf6T60-w";
 
-        assertThat(new JwtTokenVerifier(new DERPublicKeyProvider()).verify(token)).isTrue();
+        JMAPConfiguration config = JMAPConfiguration.builder()
+                .jwtPublicKeyPem(Optional.ofNullable(token))
+                .build();
+        assertThat(new JwtTokenVerifier(new DERPublicKeyProvider(config)).verify(token)).isTrue();
     }
 
     @Test
@@ -42,7 +48,10 @@ public class JwtTokenVerifierTest {
                 "tPL3EZdkeYxw_DV2KimE1U2FvuLHmfR_mimJ5US3JFU4J2Gd94O7rwpSTGN1B9h-_lsTebo4ua4xHsTtmczZ9xa8a_kWKaSkqFjNFa" +
                 "Fp6zcoD6ivCu03SlRqsQzSRHXo6TKbnqOt9D6Y2rNa3C4igSwoS0jUE4BgpXbc0";
 
-        assertThat(new JwtTokenVerifier(new DERPublicKeyProvider()).verify(token)).isFalse();
+        JMAPConfiguration config = JMAPConfiguration.builder()
+                .jwtPublicKeyPem(Optional.ofNullable(token))
+                .build();
+        assertThat(new JwtTokenVerifier(new DERPublicKeyProvider(config)).verify(token)).isFalse();
     }
 
     @Test
@@ -53,7 +62,10 @@ public class JwtTokenVerifierTest {
                 "t1Tbv21ZqYM5Ht2vrhJWczFbuC-TD-8zJkXhjTmA1GVgomIX5dx1cH-dZX1wANNmshUJGHgepWlPU-5VIYxPEhb219RMLJIELMY2qN" +
                 "OR8Q31ydinyqzXvCSzVJOf6T60-w";
 
-        assertThat(new JwtTokenVerifier(new DERPublicKeyProvider()).extractLogin(token)).isEqualTo("1234567890");
+        JMAPConfiguration config = JMAPConfiguration.builder()
+                .jwtPublicKeyPem(Optional.ofNullable(token))
+                .build();
+        assertThat(new JwtTokenVerifier(new DERPublicKeyProvider(config)).extractLogin(token)).isEqualTo("1234567890");
     }
 
 }

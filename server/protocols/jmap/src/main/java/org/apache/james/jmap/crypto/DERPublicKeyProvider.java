@@ -20,7 +20,9 @@ package org.apache.james.jmap.crypto;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.ByteStreams;
+import org.apache.james.jmap.JMAPConfiguration;
 
+import javax.inject.Inject;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.KeyFactory;
@@ -30,6 +32,15 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 
 public class DERPublicKeyProvider {
+
+    private final JMAPConfiguration config;
+    private static final byte[] MISSING_KEY = {};
+
+    @Inject
+    public DERPublicKeyProvider(JMAPConfiguration config) {
+        this.config = config;
+    }
+
     public PublicKey get() {
         try {
             X509EncodedKeySpec spec = new X509EncodedKeySpec(getPublicKeyDer());
@@ -43,10 +54,15 @@ public class DERPublicKeyProvider {
 
     private byte[] getPublicKeyDer() {
         try {
-            InputStream publicKeyDerStream = ClassLoader.getSystemResourceAsStream("jwt-public.der");
-            return ByteStreams.toByteArray(publicKeyDerStream);
+            return getDERKey();
         } catch (IOException e) {
             throw Throwables.propagate(e);
         }
+    }
+
+    private byte[] getDERKey() throws IOException {
+        return config.getJwtPublicKeyPem()
+                .map(k -> k.getBytes())
+                .orElse(MISSING_KEY);
     }
 }
