@@ -1414,6 +1414,11 @@
                 <artifactId>jetty-servlet</artifactId>
                 <version>${jetty.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.github.fge</groupId>
+                <artifactId>throwing-lambdas</artifactId>
+                <version>${throwing-lambdas.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
