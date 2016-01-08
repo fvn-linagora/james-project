@@ -28,6 +28,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.james.filesystem.api.FileSystem;
 import org.apache.james.jmap.methods.RequestHandler;
 
+import com.google.common.base.Throwables;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -58,10 +59,13 @@ public class JMAPModule extends AbstractModule {
         return new PropertiesConfiguration(fileSystem.getFile(FileSystem.FILE_PROTOCOL_AND_CONF + "jmap.properties"));
     }
 
-    private String loadPublicKey(FileSystem fileSystem, Optional<String> jwtPublickeyPemUrl) throws FileNotFoundException, IOException {
-        if (jwtPublickeyPemUrl.isPresent()) {
-            return FileUtils.readFileToString(fileSystem.getFile(jwtPublickeyPemUrl.get()));
-        }
-        return null;
+    private Optional<String> loadPublicKey(FileSystem fileSystem, Optional<String> jwtPublickeyPemUrl) {
+        return jwtPublickeyPemUrl.map(url -> {
+            try {
+                return FileUtils.readFileToString(fileSystem.getFile(url));
+            } catch (IOException e) {
+                throw Throwables.propagate(e);
+            }
+        });
     }
 }

@@ -67,13 +67,23 @@ public class JMAPConfigurationTest {
     }
 
     @Test
+    public void buildShouldThrowWhenJwtPublicKeyPemIsNull() {
+        assertThatThrownBy(() -> JMAPConfiguration.builder()
+                .keystore("keystore")
+                .secret("secret")
+                .jwtPublicKeyPem(null)
+                .build())
+            .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
     public void buildShouldWork() {
         JMAPConfiguration expectedJMAPConfiguration = new JMAPConfiguration("keystore", "secret", Optional.of("file://conf/jwt_publickey"));
 
         JMAPConfiguration jmapConfiguration = JMAPConfiguration.builder()
             .keystore("keystore")
             .secret("secret")
-            .jwtPublicKeyPem("file://conf/jwt_publickey")
+            .jwtPublicKeyPem(Optional.of("file://conf/jwt_publickey"))
             .build();
         assertThat(jmapConfiguration).isEqualToComparingFieldByField(expectedJMAPConfiguration);
     }

@@ -33,9 +33,10 @@ public class JMAPConfiguration {
     public static class Builder {
         public String keystore;
         public String secret;
-        public String jwtPublicKeyPem;
+        public Optional<String> jwtPublicKeyPem;
 
         private Builder() {
+            jwtPublicKeyPem = Optional.empty();
         }
 
         public Builder keystore(String keystore) {
@@ -48,7 +49,8 @@ public class JMAPConfiguration {
             return this;
         }
 
-        public Builder jwtPublicKeyPem(String jwtPublicKeyPem) {
+        public Builder jwtPublicKeyPem(Optional<String> jwtPublicKeyPem) {
+            Preconditions.checkNotNull(jwtPublicKeyPem);
             this.jwtPublicKeyPem = jwtPublicKeyPem;
             return this;
         }
@@ -56,7 +58,7 @@ public class JMAPConfiguration {
         public JMAPConfiguration build() {
             Preconditions.checkState(!Strings.isNullOrEmpty(keystore), "'keystore' is mandatory");
             Preconditions.checkState(!Strings.isNullOrEmpty(secret), "'secret' is mandatory");
-            return new JMAPConfiguration(keystore, secret, Optional.ofNullable(jwtPublicKeyPem));
+            return new JMAPConfiguration(keystore, secret, jwtPublicKeyPem);
         }
     }
 
