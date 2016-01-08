@@ -18,23 +18,19 @@
  ****************************************************************/
 package org.apache.james.jmap.crypto;
 
-import com.google.common.base.Throwables;
-import com.google.common.io.ByteStreams;
 import org.apache.james.jmap.JMAPConfiguration;
+import org.bouncycastle.openssl.PEMReader;
 
 import javax.inject.Inject;
 import java.io.IOException;
-import java.io.InputStream;
-import java.security.KeyFactory;
-import java.security.NoSuchAlgorithmException;
+import java.io.StringReader;
 import java.security.PublicKey;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
+import java.security.interfaces.RSAPublicKey;
+import java.util.Optional;
 
 public class DERPublicKeyProvider {
 
     private final JMAPConfiguration config;
-    private static final byte[] MISSING_KEY = {};
 
     @Inject
     public DERPublicKeyProvider(JMAPConfiguration config) {
@@ -42,27 +38,22 @@ public class DERPublicKeyProvider {
     }
 
     public PublicKey get() {
-        try {
-            X509EncodedKeySpec spec = new X509EncodedKeySpec(getPublicKeyDer());
-            KeyFactory kf = KeyFactory.getInstance("RSA");
-            return kf.generatePublic(spec);
-
-        } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
-            throw Throwables.propagate(e);
-        }
+        return fromPEMtoDER(config.getJwtPublicKeyPem())
+                .orElseThrow(() -> new MissingOrInvalidKeyException());
     }
 
-    private byte[] getPublicKeyDer() {
-        try {
-            return getDERKey();
-        } catch (IOException e) {
-            throw Throwables.propagate(e);
-        }
+    private Optional<RSAPublicKey> fromPEMtoDER(Optional<String> pemKey) {
+
+        return pemKey
+                .map(k -> new PEMReader(new StringReader(k)))
+                .map(r -> {
+                    try {
+                        return (RSAPublicKey) r.readObject();
+                    } catch (IOException e) {
+                        return null;
+                    }
+                });
     }
 
-    private byte[] getDERKey() throws IOException {
-        return config.getJwtPublicKeyPem()
-                .map(k -> k.getBytes())
-                .orElse(MISSING_KEY);
-    }
+    public class MissingOrInvalidKeyException extends RuntimeException {}
 }

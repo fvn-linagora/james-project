@@ -24,11 +24,13 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.security.Security;
+import java.security.interfaces.RSAPublicKey;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.ThrowableAssert.catchThrowable;
 
-public class JwtTokenVerifierTest {
+public class DERPublicKeyProviderTest {
 
     private static final String publicPEMKey = "-----BEGIN PUBLIC KEY-----\n" +
             "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtlChO/nlVP27MpdkG0Bh\n" +
@@ -39,22 +41,6 @@ public class JwtTokenVerifierTest {
             "U1LZUUbJW9/CH45YXz82CYqkrfbnQxqRb2iVbVjs/sHopHd1NTiCfUtwvcYJiBVj\n" +
             "kwIDAQAB\n" +
             "-----END PUBLIC KEY-----";
-    public static final String VALID_TOKEN = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIn0.T04BTk" +
-            "LXkJj24coSZkK13RfG25lpvmSl2MJ7N10KpBk9_-95EGYZdog-BDAn3PJzqVw52z-Bwjh4VOj1-j7cURu0cT4jXehhUrlCxS4n7QHZD" +
-            "N_bsEYGu7KzjWTpTsUiHe-rN7izXVFxDGG1TGwlmBCBnPW-EFCf9ylUsJi0r2BKNdaaPRfMIrHptH1zJBkkUziWpBN1RNLjmvlAUf49" +
-            "t1Tbv21ZqYM5Ht2vrhJWczFbuC-TD-8zJkXhjTmA1GVgomIX5dx1cH-dZX1wANNmshUJGHgepWlPU-5VIYxPEhb219RMLJIELMY2qN" +
-            "OR8Q31ydinyqzXvCSzVJOf6T60-w";
-
-    private final DERPublicKeyProvider pubKeyProvider = new DERPublicKeyProvider(getJWTConfiguration());
-
-    private JMAPConfiguration getJWTConfiguration() {
-
-        return JMAPConfiguration.builder()
-                .keystore(".")
-                .secret(".")
-                .jwtPublicKeyPem(Optional.ofNullable(publicPEMKey))
-                .build();
-    }
 
     @Before
     public void init() {
@@ -62,25 +48,31 @@ public class JwtTokenVerifierTest {
     }
 
     @Test
-    public void shouldReturnTrueOnValidSignature() {
-        JwtTokenVerifier sut = new JwtTokenVerifier(pubKeyProvider);
-        assertThat(sut.verify(VALID_TOKEN)).isTrue();
+    public void getShouldNotThrowWhenPEMKeyProvided() {
+
+        JMAPConfiguration configWithPEMKey = JMAPConfiguration.builder()
+                .jwtPublicKeyPem(Optional.ofNullable(publicPEMKey))
+                .keystore(".").secret(".")
+                .build();
+
+        DERPublicKeyProvider sut = new DERPublicKeyProvider(configWithPEMKey);
+
+        assertThat(sut.get()).isInstanceOf(RSAPublicKey.class);
     }
 
     @Test
-    public void shouldReturnFalseOnMismatchingSigningKey() {
-        String token = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIn0.Pd6t82" +
-                "tPL3EZdkeYxw_DV2KimE1U2FvuLHmfR_mimJ5US3JFU4J2Gd94O7rwpSTGN1B9h-_lsTebo4ua4xHsTtmczZ9xa8a_kWKaSkqFjNFa" +
-                "Fp6zcoD6ivCu03SlRqsQzSRHXo6TKbnqOt9D6Y2rNa3C4igSwoS0jUE4BgpXbc0";
+    public void getShouldThrowWhenPEMKeyNotProvided() {
+        JMAPConfiguration configWithPEMKey = JMAPConfiguration.builder()
+                .jwtPublicKeyPem(Optional.ofNullable(""))
+                .keystore(" ").secret(" ")
+                .build();
 
-        JwtTokenVerifier sut = new JwtTokenVerifier(pubKeyProvider);
-        assertThat(sut.verify(token)).isFalse();
+        DERPublicKeyProvider sut = new DERPublicKeyProvider(configWithPEMKey);
+
+        Throwable thrown = catchThrowable(() -> {
+            sut.get();
+        });
+
+        assertThat(thrown).isInstanceOf(DERPublicKeyProvider.MissingOrInvalidKeyException.class);
     }
-
-    @Test
-    public void shouldReturnUserLoginFromValidToken() {
-        JwtTokenVerifier sut = new JwtTokenVerifier(pubKeyProvider);
-        assertThat(sut.extractLogin(VALID_TOKEN)).isEqualTo("1234567890");
-    }
-
 }
