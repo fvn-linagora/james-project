@@ -215,7 +215,7 @@
                 <dependency>
                     <groupId>com.github.fge</groupId>
                     <artifactId>throwing-lambdas</artifactId>
-                    <version>0.5.0</version>
+                    <version>${throwing-lambdas.version}</version>
                 </dependency>
                 <dependency>
                     <groupId>com.jayway.restassured</groupId>
