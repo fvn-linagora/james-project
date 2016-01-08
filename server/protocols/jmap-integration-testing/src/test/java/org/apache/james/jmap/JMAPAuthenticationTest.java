@@ -51,7 +51,9 @@ public abstract class JMAPAuthenticationTest {
     private static final ZonedDateTime newDate = ZonedDateTime.parse("2011-12-03T10:16:30+01:00", DateTimeFormatter.ISO_OFFSET_DATE_TIME);
     private static final ZonedDateTime afterExpirationDate = ZonedDateTime.parse("2011-12-03T10:30:31+01:00", DateTimeFormatter.ISO_OFFSET_DATE_TIME);
 
-    
+    private static final String ORIGIN_HEADER = "Origin";
+    private static final String ORIGIN_HEADER_VALUE = "restassured-tests";
+
     private TemporaryFolder temporaryFolder = new TemporaryFolder();
     private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch(temporaryFolder);
     private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
@@ -374,13 +376,12 @@ public abstract class JMAPAuthenticationTest {
 
     @Test
     public void anyRequestShouldProvideCrossOriginHeadersInResponseWhenOriginHeaderProvided() {
-        String ORIGIN_HEADER = "Origin";
         given()
-                .headers(ORIGIN_HEADER, "restassured-tests")
+                .headers(ORIGIN_HEADER, ORIGIN_HEADER_VALUE)
                 .when()
                 .options("/authentication")
                 .then()
-                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, notNullValue())
+                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, containsString(ORIGIN_HEADER_VALUE))
                 .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER, notNullValue())
                 .statusCode(200);
     }
@@ -391,28 +392,29 @@ public abstract class JMAPAuthenticationTest {
                 .when()
                 .options("/authentication")
                 .then()
-                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, nullValue())
                 .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER, nullValue())
-                .statusCode(200);
+                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, nullValue())
+                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_METHODS_HEADER, nullValue())
+                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_HEADERS_HEADER, nullValue())
+                .header(CrossOriginFilter.ACCESS_CONTROL_MAX_AGE_HEADER, nullValue())
+
+        .statusCode(200);
     }
 
     @Test
-    public void getRequestShouldProvideCrossOriginHeadersInResponse() {
+    public void preflightRequestShouldReturnCorrectRequiredAccessControlHeaders() {
         String ORIGIN_HEADER = "Origin";
-        String token = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIn0.T04BTk" +
-                "LXkJj24coSZkK13RfG25lpvmSl2MJ7N10KpBk9_-95EGYZdog-BDAn3PJzqVw52z-Bwjh4VOj1-j7cURu0cT4jXehhUrlCxS4n7QHZ" +
-                "DN_bsEYGu7KzjWTpTsUiHe-rN7izXVFxDGG1TGwlmBCBnPW-EFCf9ylUsJi0r2BKNdaaPRfMIrHptH1zJBkkUziWpBN1RNLjmvlAUf" +
-                "49t1Tbv21ZqYM5Ht2vrhJWczFbuC-TD-8zJkXhjTmA1GVgomIX5dx1cH-dZX1wANNmshUJGHgepWlPU-5VIYxPEhb219RMLJIELMY2" +
-                "qNOR8Q31ydinyqzXvCSzVJOf6T60-w";
-
+        String ORIGIN_HEADER_VALUE = "restassured-tests";
         given()
-                .header(ORIGIN_HEADER, "restassured-tests")
-                .header("Authorization", "Bearer " + token)
+                .header(ORIGIN_HEADER, ORIGIN_HEADER_VALUE)
+                .header(CrossOriginFilter.ACCESS_CONTROL_REQUEST_METHOD_HEADER, "POST")
+                .header(CrossOriginFilter.ACCESS_CONTROL_REQUEST_HEADERS_HEADER, ORIGIN_HEADER + ",")
                 .when()
-                .post("/jmap")
+                .options("/jmap")
                 .then()
-                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, notNullValue())
-                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER, notNullValue());
+                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, containsString(ORIGIN_HEADER_VALUE))
+                .header(CrossOriginFilter.ACCESS_CONTROL_ALLOW_METHODS_HEADER, containsString("POST"))
+                .statusCode(200);
     }
 
     @Test

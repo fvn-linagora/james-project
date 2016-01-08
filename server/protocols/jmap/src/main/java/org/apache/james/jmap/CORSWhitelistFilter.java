@@ -20,7 +20,8 @@ public class CORSWhitelistFilter extends CrossOriginFilter {
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
-        decoratedFilter.init(new CORSFilterConfig(filterConfig));
+        CORSFilterConfig corsConfig = new CORSFilterConfig(filterConfig);
+        super.init(corsConfig);
     }
 
     @Override
