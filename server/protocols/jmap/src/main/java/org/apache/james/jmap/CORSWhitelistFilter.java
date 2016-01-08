@@ -25,9 +25,9 @@ public class CORSWhitelistFilter extends CrossOriginFilter {
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-        LOG.info("applying CrossOriginFilter filter");
+        LOG.debug("applying CrossOriginFilter filter");
         super.doFilter(request, response, new NullFilterChain());
-        LOG.info("calling next filter ... ");
+        LOG.debug("calling next filter ... ");
         decoratedFilter.doFilter(request, response, chain);
     }
 
@@ -49,14 +49,12 @@ public class CORSWhitelistFilter extends CrossOriginFilter {
 
         private final String filterName;
         private final ServletContext servletContext;
-        // private Enumeration<String> initParameterNames;
         private final Map<String, String> initParameters;
 
         private CORSFilterConfig(String filterName, ServletContext servletContext) {
             this.filterName = filterName;
             this.servletContext = servletContext;
             this.initParameters = new HashMap<>();
-            // this.initParameterNames = Iterators.asEnumeration(initParameters.keySet().iterator());
         }
 
         public CORSFilterConfig(FilterConfig filterConfig) {
@@ -73,7 +71,7 @@ public class CORSWhitelistFilter extends CrossOriginFilter {
             setInitParameter(CrossOriginFilter.ALLOWED_ORIGINS_PARAM, "*");
             setInitParameter(CrossOriginFilter.ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, "*");
             setInitParameter(CrossOriginFilter.ALLOWED_METHODS_PARAM, "GET,POST,HEAD");
-            setInitParameter(CrossOriginFilter.ALLOWED_HEADERS_PARAM, "X-Requested-With,Content-Type,Accept,Origin");
+            setInitParameter(CrossOriginFilter.ALLOWED_HEADERS_PARAM, "X-Requested-With,Content-Type,Accept,Origin,Authorization");
         }
 
         @Override
@@ -95,14 +93,11 @@ public class CORSWhitelistFilter extends CrossOriginFilter {
 
         @Override
         public Enumeration<String> getInitParameterNames() {
-            // return initParameterNames;
             return Iterators.asEnumeration(initParameters.keySet().iterator());
         }
 
         public void setInitParameter(String name, String value) {
             initParameters.putIfAbsent(name, value);
         }
-
-
     }
 }

@@ -66,7 +66,6 @@ public class JettyHttpServer implements Closeable {
     private ServletHandler buildServletHandler(Configuration configuration) {
         ServletHandler servletHandler = new ServletHandler();
 
-        ConfigureCORS(servletHandler);
         BiConsumer<String, ServletHolder> addServletMapping = (path, servletHolder) -> servletHandler.addServletWithMapping(servletHolder, path);
         BiConsumer<String, FilterHolder> addFilterMapping = (path, filterHolder) -> servletHandler.addFilterWithMapping(filterHolder, path, EnumSet.of(DispatcherType.REQUEST));
         Maps.transformEntries(configuration.getMappings(), this::toServletHolder).forEach(addServletMapping);
@@ -74,23 +73,6 @@ public class JettyHttpServer implements Closeable {
 
         return servletHandler;
     }
-
-    private void ConfigureCORS(ServletHandler servletHandler) {
-        // FilterHolder holder = new FilterHolder(CrossOriginFilter.class);
-        FilterHolder holder = new FilterHolder(MyCrossOriginFilter.class);
-        holder.setInitParameter(CrossOriginFilter.ALLOWED_ORIGINS_PARAM, "*");
-        holder.setInitParameter(CrossOriginFilter.ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, "*");
-        holder.setInitParameter(CrossOriginFilter.ALLOWED_METHODS_PARAM, "GET,POST,HEAD");
-        holder.setInitParameter(CrossOriginFilter.ALLOWED_HEADERS_PARAM, "X-Requested-With,Content-Type,Accept,Origin");
-        holder.setName("cross-origin");
-//        FilterMapping fm = new FilterMapping();
-//        fm.setFilterName("cross-origin");
-//        fm.setPathSpec("*");
-        // servletHandler.addFilter(holder, fm );
-        servletHandler.addFilterWithMapping(holder, "/jmap", EnumSet.of(DispatcherType.REQUEST));
-        servletHandler.addFilterWithMapping(holder, "/authentication", EnumSet.of(DispatcherType.REQUEST));
-    }
-
 
     @SuppressWarnings("unchecked")
     private ServletHolder toServletHolder(String path, Object value) {

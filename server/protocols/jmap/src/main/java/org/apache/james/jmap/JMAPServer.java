@@ -46,13 +46,9 @@ public class JMAPServer implements Configurable {
         server = JettyHttpServer.create(
                 configurationBuilderFor(portConfiguration)
                         .serve("/authentication").with(authenticationServlet)
-                        // .filter("/authentication").with(new CORSFilter(new BypassOnPostFilter(authenticationFilter)))
                         .filter("/authentication").with(new CORSWhitelistFilter(new BypassOnPostFilter(authenticationFilter)))
-                        //.filter("/authentication").with(new BypassOnPostFilter(authenticationFilter))
                         .serve("/jmap").with(jmapServlet)
-                        // .filter("/jmap").with(new CORSFilter(authenticationFilter))
                         .filter("/jmap").with(new CORSWhitelistFilter(authenticationFilter))
-                        // .filter("/jmap").with(authenticationFilter)
                         .build());
     }
 
