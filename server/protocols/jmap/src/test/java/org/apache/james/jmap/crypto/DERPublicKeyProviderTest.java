@@ -32,7 +32,7 @@ import static org.assertj.core.api.ThrowableAssert.catchThrowable;
 
 public class DERPublicKeyProviderTest {
 
-    private static final String publicPEMKey = "-----BEGIN PUBLIC KEY-----\n" +
+    private static final String PUBLIC_PEM_KEY = "-----BEGIN PUBLIC KEY-----\n" +
             "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtlChO/nlVP27MpdkG0Bh\n" +
             "16XrMRf6M4NeyGa7j5+1UKm42IKUf3lM28oe82MqIIRyvskPc11NuzSor8HmvH8H\n" +
             "lhDs5DyJtx2qp35AT0zCqfwlaDnlDc/QDlZv1CoRZGpQk1Inyh6SbZwYpxxwh0fi\n" +
@@ -51,7 +51,7 @@ public class DERPublicKeyProviderTest {
     public void getShouldNotThrowWhenPEMKeyProvided() {
 
         JMAPConfiguration configWithPEMKey = JMAPConfiguration.builder()
-                .jwtPublicKeyPem(Optional.ofNullable(publicPEMKey))
+                .jwtPublicKeyPem(Optional.ofNullable(PUBLIC_PEM_KEY))
                 .keystore(".").secret(".")
                 .build();
 

@@ -39,7 +39,6 @@ public class CORSFilter implements Filter {
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
 
-        System.out.println("WTF ");
         HttpServletResponse servletResponse = (HttpServletResponse) response;
         servletResponse.addHeader("Access-Control-Allow-Origin", "*");
         servletResponse.addHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT");
