@@ -28,11 +28,11 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletResponse;
 
-public class CORSFilter implements Filter {
+public class AllowAllCrossOriginRequests implements Filter {
 
     private final Filter nestedFilter;
 
-    public CORSFilter(Filter nestedFilter) {
+    public AllowAllCrossOriginRequests(Filter nestedFilter) {
         this.nestedFilter = nestedFilter;
     }
 
