@@ -21,6 +21,7 @@ package org.apache.james.jmap;
 import org.apache.james.jmap.crypto.JwtTokenVerifier;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,19 +45,22 @@ public class JWTAuthenticationStrategy implements AuthenticationStrategy<Optiona
     @Override
     public MailboxSession createMailboxSession(Optional<String> authHeader) throws MailboxException {
         return mailboxManager.createSystemSession(
-                tokenManager.extractLogin(extractToken(authHeader).get()), LOG);
+                tokenManager.extractLogin(extractToken(authHeader)), LOG);
     }
 
     @Override
     public boolean checkAuthorizationHeader(Optional<String> authHeader) {
-         return extractToken(authHeader)
-                 .map(tokenManager::verify)
-                 .orElse(false);
+        try {
+            return tokenManager.verify(extractToken(authHeader));
+        } catch (BadCredentialsException e) {
+            return false;
+        }
     }
 
-    private Optional<String> extractToken(Optional<String> authHeader) {
+    private String extractToken(Optional<String> authHeader) throws BadCredentialsException {
         return authHeader
                 .filter(h -> h.startsWith(AUTHORIZATION_HEADER_PREFIX))
-                .map(s -> s.substring(AUTHORIZATION_HEADER_PREFIX.length()));
+                .map(s -> s.substring(AUTHORIZATION_HEADER_PREFIX.length()))
+                .orElseThrow(BadCredentialsException::new);
     }
 }

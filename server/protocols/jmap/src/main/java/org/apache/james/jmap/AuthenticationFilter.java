@@ -57,8 +57,6 @@ public class AuthenticationFilter implements Filter {
 
         Optional<String> authHeader = Optional.ofNullable(httpRequest.getHeader("Authorization"));
 
-        LOG.info("AuthenticationFilter.doFilter crossed ...");
-
         // Bypass auth pipeline for request with method/verb OPTIONS
         boolean isAuthorized = "options".equals(httpRequest.getMethod().trim().toLowerCase());
 
