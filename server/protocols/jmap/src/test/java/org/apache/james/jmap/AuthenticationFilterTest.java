@@ -63,7 +63,7 @@ public class AuthenticationFilterTest {
         accessTokenManager = new AccessTokenManagerImpl(accessTokenRepository);
         MailboxManager mockedMailboxManager = mock(MailboxManager.class);
 
-        testee = null; //new AuthenticationFilter(accessTokenManager, mockedMailboxManager);
+        testee = new AuthenticationFilter(accessTokenManager, mockedMailboxManager);
         filterChain = mock(FilterChain.class);
     }
 
@@ -101,15 +101,13 @@ public class AuthenticationFilterTest {
     }
 
     @Test(expected=BadCredentialsException.class)
-    @Ignore
     public void createMailboxSessionShouldThrowWhenAuthHeaderIsEmpty() throws Exception {
-        // testee.createMailboxSession(Optional.empty());
+        testee.createMailboxSession(Optional.empty());
     }
 
     @Test(expected=NotAnUUIDException.class)
-    @Ignore
     public void createMailboxSessionShouldThrowWhenAuthHeaderIsNotAnUUID() throws Exception {
-        // testee.createMailboxSession(Optional.of("bad"));
+        testee.createMailboxSession(Optional.of("bad"));
     }
 
     @Test

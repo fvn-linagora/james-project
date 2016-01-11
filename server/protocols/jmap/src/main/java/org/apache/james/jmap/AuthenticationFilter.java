@@ -63,20 +63,14 @@ public class AuthenticationFilter implements Filter {
         boolean isAuthorized = "options".equals(httpRequest.getMethod().trim().toLowerCase());
 
         ListIterator<AuthenticationStrategy<Optional<String>>> authenticationMethodsIterator = authMethods.listIterator();
+        AuthenticationStrategy<Optional<String>> authMethod = noAuthentication();
         while(!isAuthorized && authenticationMethodsIterator.hasNext())
         {
-            AuthenticationStrategy<Optional<String>> authMethod = authenticationMethodsIterator.next();
+            authMethod = authenticationMethodsIterator.next();
 
             if (authMethod.checkAuthorizationHeader(authHeader)) {
                 isAuthorized = true;
                 LOG.debug("request was authorized via " + authMethod.getClass().getCanonicalName());
-
-                addSessionToRequest(httpRequest, authHeader, h -> {
-                    MailboxSession result = null;
-                    try { result = authMethod.createMailboxSession(h); }
-                    catch (MailboxException e) { Throwables.propagate(e); }
-                    return result;
-                });
             }
         }
 
@@ -84,14 +78,38 @@ public class AuthenticationFilter implements Filter {
             httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
+        else {
+            try {
+                addSessionToRequest(httpRequest, createSession(authMethod, authHeader));
+            } catch (MailboxException e) {
+                Throwables.propagate(e);
+            }
+        }
 
         chain.doFilter(httpRequest, response);
     }
 
-    private void addSessionToRequest(HttpServletRequest httpRequest, Optional<String> authHeader,
-                                     Function<Optional<String>, MailboxSession> sessionCreator) {
-        MailboxSession mailboxSession = sessionCreator.apply(authHeader);
+    private void addSessionToRequest(HttpServletRequest httpRequest, MailboxSession mailboxSession) {
         httpRequest.setAttribute(MAILBOX_SESSION, mailboxSession);
+    }
+
+    private MailboxSession createSession(AuthenticationStrategy<Optional<String>> authenticationMethod,
+                                         Optional<String> authorizationHeader) throws MailboxException {
+        return authenticationMethod.createMailboxSession(authorizationHeader);
+    }
+
+    private AuthenticationStrategy<Optional<String>> noAuthentication() {
+        return new AuthenticationStrategy<Optional<String>>() {
+            @Override
+            public MailboxSession createMailboxSession(Optional<String> requestHeaders) throws MailboxException {
+                return null;
+            }
+
+            @Override
+            public boolean checkAuthorizationHeader(Optional<String> requestHeaders) {
+                return false;
+            }
+        };
     }
 
     @Override
