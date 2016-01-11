@@ -18,9 +18,7 @@
  ****************************************************************/
 package org.apache.james.jmap;
 
-import com.google.common.base.Throwables;
 import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.exception.MailboxException;
 import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.log.Logger;
 
@@ -29,15 +27,14 @@ import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Optional;
-import java.util.function.Function;
+import java.util.*;
+import java.util.stream.Stream;
 
 public class AuthenticationFilter implements Filter {
 
     public static final String MAILBOX_SESSION = "mailboxSession";
     private static final Logger LOG = Log.getLogger(AuthenticationFilter.class);
+    public static final String AUTHORIZATION_HEADERS = "Authorization";
 
     private final List<AuthenticationStrategy<Optional<String>>> authMethods;
 
@@ -54,8 +51,9 @@ public class AuthenticationFilter implements Filter {
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
+        Optional<String> authHeader = Optional.ofNullable(httpRequest.getHeader(AUTHORIZATION_HEADERS));
 
-        Optional<String> authHeader = Optional.ofNullable(httpRequest.getHeader("Authorization"));
+        Stream<String> authHeaders = StreamHelpers.enumerationAsStream(httpRequest.getHeaders(AUTHORIZATION_HEADERS));
 
         // Bypass auth pipeline for request with method/verb OPTIONS
         boolean isAuthorized = "options".equals(httpRequest.getMethod().trim().toLowerCase());
@@ -72,35 +70,38 @@ public class AuthenticationFilter implements Filter {
             }
         }
 
-        if (! isAuthorized) {
+        Optional<HttpServletRequest> requestWithSession = authMethods.stream()
+                .filter(auth -> auth.checkAuthorizationHeader(authHeader))
+                .findFirst()
+                .map(auth -> addSessionToRequest(httpRequest, createSession(auth, authHeader)));
+
+        if (! isAuthorized || ! requestWithSession.isPresent()) {
             httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return;
-        }
-        else {
-            try {
-                addSessionToRequest(httpRequest, createSession(authMethod, authHeader));
-            } catch (MailboxException e) {
-                Throwables.propagate(e);
-            }
         }
 
         chain.doFilter(httpRequest, response);
     }
 
-    private void addSessionToRequest(HttpServletRequest httpRequest, MailboxSession mailboxSession) {
-        httpRequest.setAttribute(MAILBOX_SESSION, mailboxSession);
+    private HttpServletRequest addSessionToRequest(HttpServletRequest httpRequest, Optional<MailboxSession> mailboxSession) {
+        if (mailboxSession.isPresent()) {
+
+            httpRequest.setAttribute(MAILBOX_SESSION, mailboxSession);
+        }
+        return httpRequest;
     }
 
-    private MailboxSession createSession(AuthenticationStrategy<Optional<String>> authenticationMethod,
-                                         Optional<String> authorizationHeader) throws MailboxException {
+    private Optional<MailboxSession> createSession(AuthenticationStrategy<Optional<String>> authenticationMethod,
+                                                   Optional<String> authorizationHeader) {
+
         return authenticationMethod.createMailboxSession(authorizationHeader);
     }
 
     private AuthenticationStrategy<Optional<String>> noAuthentication() {
         return new AuthenticationStrategy<Optional<String>>() {
             @Override
-            public MailboxSession createMailboxSession(Optional<String> requestHeaders) throws MailboxException {
-                return null;
+            public Optional<MailboxSession> createMailboxSession(Optional<String> requestHeaders) {
+                return Optional.empty();
             }
 
             @Override

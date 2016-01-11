@@ -31,6 +31,7 @@ import org.junit.Test;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 
 public class JWTAuthenticationStrategyTest {
@@ -52,11 +53,11 @@ public class JWTAuthenticationStrategyTest {
 
     @Test(expected=BadCredentialsException.class)
     public void createMailboxSessionShouldThrowWhenAuthHeaderIsEmpty() throws Exception {
-        testee.createMailboxSession(Optional.empty());
+        testee.createMailboxSession(Stream.empty());
     }
 
     @Test(expected=BadCredentialsException.class)
     public void createMailboxSessionShouldThrowWhenAuthHeaderIsInvalid() throws Exception {
-        testee.createMailboxSession(Optional.of("bad"));
+        testee.createMailboxSession(Stream.of("bad"));
     }
 }

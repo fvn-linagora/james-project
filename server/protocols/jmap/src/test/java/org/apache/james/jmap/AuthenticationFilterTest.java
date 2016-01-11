@@ -38,6 +38,7 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.swing.text.html.Option;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -133,9 +134,7 @@ public class AuthenticationFilterTest {
         }
 
         @Override
-        public MailboxSession createMailboxSession(Optional<String> requestHeaders) throws MailboxException {
-            return null;
-        }
+        public Optional<MailboxSession> createMailboxSession(Optional<String> requestHeaders) { return Optional.empty(); }
 
         @Override
         public boolean checkAuthorizationHeader(Optional<String> requestHeaders) {

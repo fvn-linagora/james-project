@@ -18,6 +18,8 @@
  ****************************************************************/
 package org.apache.james.jmap;
 
+import static org.mockito.Mockito.mock;
+
 import org.apache.james.jmap.api.access.exceptions.NotAnUUIDException;
 import org.apache.james.jmap.crypto.AccessTokenManagerImpl;
 import org.apache.james.jmap.memory.access.MemoryAccessTokenRepository;
@@ -26,10 +28,8 @@ import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-
-import static org.mockito.Mockito.mock;
+import java.util.stream.Stream;
 
 public class AccessTokenAuthenticationStrategyTest {
 
@@ -48,11 +48,11 @@ public class AccessTokenAuthenticationStrategyTest {
 
     @Test(expected=BadCredentialsException.class)
     public void createMailboxSessionShouldThrowWhenAuthHeaderIsEmpty() throws Exception {
-        testee.createMailboxSession(Optional.empty());
+        testee.createMailboxSession(Stream.empty());
     }
 
     @Test(expected=NotAnUUIDException.class)
     public void createMailboxSessionShouldThrowWhenAuthHeaderIsNotAnUUID() throws Exception {
-        testee.createMailboxSession(Optional.of("bad"));
+        testee.createMailboxSession(Stream.of("bad"));
     }
 }

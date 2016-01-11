@@ -23,15 +23,15 @@ import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.jmap.api.access.exceptions.NotAnUUIDException;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.exception.BadCredentialsException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.util.Optional;
+import java.util.stream.Stream;
 
-public class AccessTokenAuthenticationStrategy implements AuthenticationStrategy<Optional<String>> {
+public class AccessTokenAuthenticationStrategy implements AuthenticationStrategy<Stream<String>> {
 
     private static final Logger LOG = LoggerFactory.getLogger(AccessTokenAuthenticationStrategy.class);
 
@@ -45,24 +45,33 @@ public class AccessTokenAuthenticationStrategy implements AuthenticationStrategy
     }
 
     @Override
-    public MailboxSession createMailboxSession(Optional<String> authHeader) throws MailboxException {
-        String username = authHeader
+    public Optional<MailboxSession> createMailboxSession(Stream<String> authHeaders) {
+
+        return authHeaders
                 .map(AccessToken::fromString)
                 .map(accessTokenManager::getUsernameFromToken)
-                .orElseThrow(BadCredentialsException::new);
-        return mailboxManager.createSystemSession(username, LOG);
+                .findFirst()
+                // .orElseThrow(BadCredentialsException::new)
+                .map(user -> {
+                    try {
+                        return mailboxManager.createSystemSession(user, LOG);
+                    } catch (MailboxException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                ;
     }
 
     @Override
-    public boolean checkAuthorizationHeader(Optional<String> authHeader) {
+    public boolean checkAuthorizationHeader(Stream<String> authHeaders) {
         try {
-            return authHeader
+            return authHeaders
                     .map(AccessToken::fromString)
                     .map(accessTokenManager::isValid)
+                    .findAny()
                     .orElse(false);
         } catch (NotAnUUIDException e) {
             return false;
         }
     }
-
 }

@@ -19,9 +19,10 @@
 package org.apache.james.jmap;
 
 import org.apache.james.mailbox.MailboxSession;
-import org.apache.james.mailbox.exception.MailboxException;
+
+import java.util.Optional;
 
 public interface AuthenticationStrategy<R> {
-    MailboxSession createMailboxSession(R requestHeaders) throws MailboxException;
+    Optional<MailboxSession> createMailboxSession(R requestHeaders);
     boolean checkAuthorizationHeader(R requestHeaders);
 }
