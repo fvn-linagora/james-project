@@ -51,12 +51,12 @@ public class JWTAuthenticationStrategyTest {
     }
 
 
-    @Test // @Test(expected=BadCredentialsException.class)
+    @Test
     public void createMailboxSessionShouldReturnEmptyWhenAuthHeaderIsEmpty() throws Exception {
         assertThat(testee.createMailboxSession(Stream.empty()).isPresent()).isFalse();
     }
 
-    @Test // @Test(expected=BadCredentialsException.class)
+    @Test
     public void createMailboxSessionShouldReturnEmptyWhenAuthHeaderIsInvalid() throws Exception {
         assertThat(testee.createMailboxSession(Stream.of("bad")).isPresent()).isFalse();
     }

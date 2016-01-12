@@ -48,7 +48,7 @@ public class AccessTokenAuthenticationStrategyTest {
     }
 
 
-    @Test // @Test(expected= BadCredentialsException.class)
+    @Test
     public void createMailboxSessionShouldNotThrowWhenAuthHeaderIsEmpty() throws Exception {
         assertThat(testee.createMailboxSession(Stream.empty()).isPresent()).isFalse();
     }

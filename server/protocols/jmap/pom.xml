@@ -20,13 +20,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <dependencies>
-        <dependency>
-            <groupId>org.bouncycastle</groupId>
-            <artifactId>bcprov-jdk16</artifactId>
-            <version>1.46</version>
-        </dependency>
-    </dependencies>
 
     <parent>
         <artifactId>james-server</artifactId>
@@ -235,7 +228,6 @@
                 <dependency>
                     <groupId>io.jsonwebtoken</groupId>
                     <artifactId>jjwt</artifactId>
-                    <version>0.6.0</version>
                 </dependency>
                 <dependency>
                     <groupId>javax.inject</groupId>
@@ -269,6 +261,10 @@
                     <artifactId>assertj-core</artifactId>
                     <version>${assertj-3.version}</version>
                     <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.bouncycastle</groupId>
+                    <artifactId>bcprov-jdk16</artifactId>
                 </dependency>
                 <dependency>
                     <groupId>org.eclipse.jetty</groupId>

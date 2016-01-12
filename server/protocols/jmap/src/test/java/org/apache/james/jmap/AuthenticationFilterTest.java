@@ -63,7 +63,7 @@ public class AuthenticationFilterTest {
         accessTokenManager = new AccessTokenManagerImpl(accessTokenRepository);
 
         when(mockedRequest.getMethod()).thenReturn("POST");
-        List<AuthenticationStrategy<Stream<String>>> fakeAuthenticationStrategies = ImmutableList.of( new FakeAuthenticationStrategy(false));
+        List<AuthenticationStrategy> fakeAuthenticationStrategies = ImmutableList.of( new FakeAuthenticationStrategy(false));
 
         testee = new AuthenticationFilter(fakeAuthenticationStrategies);
         filterChain = mock(FilterChain.class);
@@ -124,7 +124,7 @@ public class AuthenticationFilterTest {
         verify(filterChain).doFilter(any(ServletRequest.class), eq(mockedResponse));
     }
 
-    private class FakeAuthenticationStrategy implements AuthenticationStrategy<Stream<String>> {
+    private class FakeAuthenticationStrategy implements AuthenticationStrategy {
 
         private final boolean isAuthorized;
 

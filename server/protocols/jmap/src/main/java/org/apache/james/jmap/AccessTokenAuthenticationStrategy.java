@@ -18,6 +18,7 @@
  ****************************************************************/
 package org.apache.james.jmap;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.james.jmap.api.AccessTokenManager;
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.jmap.api.access.exceptions.NotAnUUIDException;
@@ -31,7 +32,7 @@ import javax.inject.Inject;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-public class AccessTokenAuthenticationStrategy implements AuthenticationStrategy<Stream<String>> {
+public class AccessTokenAuthenticationStrategy implements AuthenticationStrategy {
 
     private static final Logger LOG = LoggerFactory.getLogger(AccessTokenAuthenticationStrategy.class);
 
@@ -39,7 +40,8 @@ public class AccessTokenAuthenticationStrategy implements AuthenticationStrategy
     private final MailboxManager mailboxManager;
 
     @Inject
-    public AccessTokenAuthenticationStrategy(AccessTokenManager accessTokenManager, MailboxManager mailboxManager) {
+    @VisibleForTesting
+    AccessTokenAuthenticationStrategy(AccessTokenManager accessTokenManager, MailboxManager mailboxManager) {
         this.accessTokenManager = accessTokenManager;
         this.mailboxManager = mailboxManager;
     }
@@ -51,7 +53,6 @@ public class AccessTokenAuthenticationStrategy implements AuthenticationStrategy
                 .map(AccessToken::fromString)
                 .map(accessTokenManager::getUsernameFromToken)
                 .findFirst()
-                // .orElseThrow(BadCredentialsException::new)
                 .map(user -> {
                     try {
                         return mailboxManager.createSystemSession(user, LOG);

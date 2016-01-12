@@ -194,6 +194,8 @@
         <assertj-1.version>1.7.1</assertj-1.version>
         <assertj-3.version>3.2.0</assertj-3.version>
         <throwing-lambdas.version>0.5.0</throwing-lambdas.version>
+        <jjwt.version>0.6.0</jjwt.version>
+        <bouncycastle.version>1.46</bouncycastle.version>
     </properties>
 
     <dependencyManagement>
@@ -1390,6 +1392,11 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt</artifactId>
+                <version>${jjwt.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.jayway.awaitility</groupId>
                 <artifactId>awaitility</artifactId>
                 <version>1.6.3</version>
@@ -1398,6 +1405,11 @@
                 <groupId>com.jayway.restassured</groupId>
                 <artifactId>rest-assured</artifactId>
                 <version>2.6.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk16</artifactId>
+                <version>${bouncycastle.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>

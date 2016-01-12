@@ -18,28 +18,30 @@
  ****************************************************************/
 package org.apache.james.jmap;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.james.mailbox.MailboxSession;
-import org.eclipse.jetty.util.log.Log;
-import org.eclipse.jetty.util.log.Logger;
 
 import javax.inject.Inject;
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.*;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 public class AuthenticationFilter implements Filter {
 
     public static final String MAILBOX_SESSION = "mailboxSession";
-    private static final Logger LOG = Log.getLogger(AuthenticationFilter.class);
     public static final String AUTHORIZATION_HEADERS = "Authorization";
 
-    private final List<AuthenticationStrategy<Stream<String>>> authMethods;
+    private final List<AuthenticationStrategy> authMethods;
 
     @Inject
-    public AuthenticationFilter(List<AuthenticationStrategy<Stream<String>>> authMethods) {
+    @VisibleForTesting
+    AuthenticationFilter(List<AuthenticationStrategy> authMethods) {
         this.authMethods = authMethods;
     }
 
@@ -53,14 +55,14 @@ public class AuthenticationFilter implements Filter {
         HttpServletResponse httpResponse = (HttpServletResponse) response;
 
         // Bypass auth pipeline for request with method/verb OPTIONS
-        boolean isAuthorized = "options".equals(httpRequest.getMethod().trim().toLowerCase());
+        boolean isCORSPreflightRequest = "options".equals(httpRequest.getMethod().trim().toLowerCase());
 
-        Optional<HttpServletRequest> sessionSetInRequest = authMethods.stream()
+        Optional<HttpServletRequest> requestWithSession = authMethods.stream()
                 .filter(auth -> auth.checkAuthorizationHeader(getAuthHeaders(httpRequest)))
                 .findFirst()
                 .map(auth -> addSessionToRequest(httpRequest, createSession(auth, getAuthHeaders(httpRequest))));
 
-        if (!isAuthorized && !sessionSetInRequest.isPresent()) {
+        if (!isCORSPreflightRequest && !requestWithSession.isPresent()) {
             httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
@@ -82,24 +84,10 @@ public class AuthenticationFilter implements Filter {
         return httpRequest;
     }
 
-    private Optional<MailboxSession> createSession(AuthenticationStrategy<Stream<String>> authenticationMethod,
+    private Optional<MailboxSession> createSession(AuthenticationStrategy authenticationMethod,
                                                    Stream<String> authorizationHeaders) {
 
         return authenticationMethod.createMailboxSession(authorizationHeaders);
-    }
-
-    private AuthenticationStrategy<Optional<String>> noAuthentication() {
-        return new AuthenticationStrategy<Optional<String>>() {
-            @Override
-            public Optional<MailboxSession> createMailboxSession(Optional<String> requestHeaders) {
-                return Optional.empty();
-            }
-
-            @Override
-            public boolean checkAuthorizationHeader(Optional<String> requestHeaders) {
-                return false;
-            }
-        };
     }
 
     @Override

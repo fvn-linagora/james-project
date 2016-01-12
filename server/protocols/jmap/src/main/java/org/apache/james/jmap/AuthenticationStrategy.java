@@ -19,10 +19,10 @@
 package org.apache.james.jmap;
 
 import org.apache.james.mailbox.MailboxSession;
-
 import java.util.Optional;
+import java.util.stream.Stream;
 
-public interface AuthenticationStrategy<R> {
-    Optional<MailboxSession> createMailboxSession(R requestHeaders);
-    boolean checkAuthorizationHeader(R requestHeaders);
+public interface AuthenticationStrategy {
+    Optional<MailboxSession> createMailboxSession(Stream<String> requestHeaders);
+    boolean checkAuthorizationHeader(Stream<String> requestHeaders);
 }

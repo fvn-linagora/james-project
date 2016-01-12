@@ -53,7 +53,7 @@ public class JMAPCommonModule extends AbstractModule {
     }
 
     @Provides
-    public List<AuthenticationStrategy<Stream<String>>> authStrategies(
+    public List<AuthenticationStrategy> authStrategies(
             AccessTokenAuthenticationStrategy accessTokenAuthenticationStrategy,
             JWTAuthenticationStrategy jwtAuthenticationStrategy) {
 
