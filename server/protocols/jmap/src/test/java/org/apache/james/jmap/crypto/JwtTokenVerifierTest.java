@@ -46,6 +46,7 @@ public class JwtTokenVerifierTest {
             "OR8Q31ydinyqzXvCSzVJOf6T60-w";
 
     private final PublicKeyProvider pubKeyProvider = new PublicKeyProvider(getJWTConfiguration(), new DEREncodingConverter());
+    private final JwtTokenVerifier sut = new JwtTokenVerifier(pubKeyProvider);
 
     private JMAPConfiguration getJWTConfiguration() {
 
@@ -63,7 +64,7 @@ public class JwtTokenVerifierTest {
 
     @Test
     public void shouldReturnTrueOnValidSignature() {
-        JwtTokenVerifier sut = new JwtTokenVerifier(pubKeyProvider);
+
         assertThat(sut.verify(VALID_TOKEN)).isTrue();
     }
 
@@ -73,13 +74,12 @@ public class JwtTokenVerifierTest {
                 "tPL3EZdkeYxw_DV2KimE1U2FvuLHmfR_mimJ5US3JFU4J2Gd94O7rwpSTGN1B9h-_lsTebo4ua4xHsTtmczZ9xa8a_kWKaSkqFjNFa" +
                 "Fp6zcoD6ivCu03SlRqsQzSRHXo6TKbnqOt9D6Y2rNa3C4igSwoS0jUE4BgpXbc0";
 
-        JwtTokenVerifier sut = new JwtTokenVerifier(pubKeyProvider);
         assertThat(sut.verify(token)).isFalse();
     }
 
     @Test
     public void shouldReturnUserLoginFromValidToken() {
-        JwtTokenVerifier sut = new JwtTokenVerifier(pubKeyProvider);
+
         assertThat(sut.extractLogin(VALID_TOKEN)).isEqualTo("1234567890");
     }
 

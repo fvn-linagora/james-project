@@ -191,7 +191,7 @@ public abstract class GetMailboxesMethodTest {
                 .when()
                 .post("/jmap")
                 .then()
-                .statusCode(500);
+                .statusCode(401);
     }
 
     @Test

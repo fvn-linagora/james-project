@@ -239,6 +239,10 @@
                     <version>3.0.1</version>
                     <scope>provided</scope>
                 </dependency>
+                <dependency>
+                    <groupId>org.bouncycastle</groupId>
+                    <artifactId>bcprov-jdk16</artifactId>
+                </dependency>
                 
                 <dependency>
                     <groupId>org.apache.james</groupId>
@@ -261,10 +265,6 @@
                     <artifactId>assertj-core</artifactId>
                     <version>${assertj-3.version}</version>
                     <scope>test</scope>
-                </dependency>
-                <dependency>
-                    <groupId>org.bouncycastle</groupId>
-                    <artifactId>bcprov-jdk16</artifactId>
                 </dependency>
                 <dependency>
                     <groupId>org.eclipse.jetty</groupId>

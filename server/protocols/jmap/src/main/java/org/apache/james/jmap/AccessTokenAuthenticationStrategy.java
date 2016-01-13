@@ -19,6 +19,7 @@
 package org.apache.james.jmap;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Throwables;
 import org.apache.james.jmap.api.AccessTokenManager;
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.jmap.api.access.exceptions.NotAnUUIDException;
@@ -57,10 +58,9 @@ public class AccessTokenAuthenticationStrategy implements AuthenticationStrategy
                     try {
                         return mailboxManager.createSystemSession(user, LOG);
                     } catch (MailboxException e) {
-                        throw new RuntimeException(e);
+                        throw Throwables.propagate(e);
                     }
-                })
-                ;
+                });
     }
 
     @Override

@@ -22,7 +22,12 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.james.mailbox.MailboxSession;
 
 import javax.inject.Inject;
-import javax.servlet.*;
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -35,7 +40,7 @@ import java.util.stream.Stream;
 public class AuthenticationFilter implements Filter {
 
     public static final String MAILBOX_SESSION = "mailboxSession";
-    public static final String AUTHORIZATION_HEADERS = "Authorization";
+    private static final String AUTHORIZATION_HEADERS = "Authorization";
 
     private final List<AuthenticationStrategy> authMethods;
 
@@ -54,20 +59,21 @@ public class AuthenticationFilter implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
 
-        // Bypass auth pipeline for request with method/verb OPTIONS
-        boolean isCORSPreflightRequest = "options".equals(httpRequest.getMethod().trim().toLowerCase());
+//        // Bypass auth pipeline for request with method/verb OPTIONS
+//        boolean isCORSPreflightRequest = "options".equals(httpRequest.getMethod().trim().toLowerCase(Locale.US));
 
-        Optional<HttpServletRequest> requestWithSession = authMethods.stream()
-                .filter(auth -> auth.checkAuthorizationHeader(getAuthHeaders(httpRequest)))
-                .findFirst()
-                .map(auth -> addSessionToRequest(httpRequest, createSession(auth, getAuthHeaders(httpRequest))));
+        try {
+            HttpServletRequest requestWithSession = authMethods.stream()
+                    .filter(auth -> auth.checkAuthorizationHeader(getAuthHeaders(httpRequest)))
+                    .findFirst()
+                    .map(auth -> addSessionToRequest(httpRequest, createSession(auth, getAuthHeaders(httpRequest))))
+                    .orElseThrow(UnauthorizedException::new);
+            chain.doFilter(requestWithSession, response);
 
-        if (!isCORSPreflightRequest && !requestWithSession.isPresent()) {
+        } catch (UnauthorizedException e) {
             httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-            return;
         }
 
-        chain.doFilter(httpRequest, response);
     }
 
     private Stream<String> getAuthHeaders(HttpServletRequest httpRequest) {

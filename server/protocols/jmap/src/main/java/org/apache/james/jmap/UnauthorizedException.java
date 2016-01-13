@@ -16,7 +16,8 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap.crypto;
 
-public class MissingOrInvalidKeyException extends RuntimeException {
+package org.apache.james.jmap;
+
+public class UnauthorizedException extends RuntimeException {
 }

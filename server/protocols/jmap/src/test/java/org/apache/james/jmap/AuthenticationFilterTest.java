@@ -113,17 +113,6 @@ public class AuthenticationFilterTest {
         verify(mockedResponse).sendError(HttpServletResponse.SC_UNAUTHORIZED);
     }
 
-    @Test
-    public void shouldBypassAuthWhenRequestUseOptionsVerb() throws IOException, ServletException {
-        HttpServletRequest stubbedRequest = mock(HttpServletRequest.class);
-        when(stubbedRequest.getMethod()).thenReturn("OPTIONS");
-
-        AuthenticationFilter sut = new AuthenticationFilter(new ArrayList<>());
-        sut.doFilter(stubbedRequest, mockedResponse, filterChain);
-
-        verify(filterChain).doFilter(any(ServletRequest.class), eq(mockedResponse));
-    }
-
     private class FakeAuthenticationStrategy implements AuthenticationStrategy {
 
         private final boolean isAuthorized;

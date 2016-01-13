@@ -19,7 +19,6 @@
 package org.apache.james.jmap.crypto;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Throwables;
 import io.jsonwebtoken.*;
 
 import javax.inject.Inject;
@@ -50,10 +49,9 @@ public class JwtTokenVerifier {
         JwtParser parser;
         try {
             parser = Jwts.parser().setSigningKey(pubKeyProvider.get());
-        } catch(SignatureException e) {
-            Throwables.propagate(e);
+            return Optional.ofNullable(parser.parseClaimsJws(token));
+        } catch(ExpiredJwtException | UnsupportedJwtException | MalformedJwtException | SignatureException e ) {
             return Optional.empty();
         }
-        return Optional.ofNullable(parser.parseClaimsJws(token));
     }
 }
