@@ -18,32 +18,42 @@
  ****************************************************************/
 package org.apache.james.jmap.crypto;
 
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureException;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Throwables;
+import io.jsonwebtoken.*;
 
 import javax.inject.Inject;
+import java.util.Optional;
 
 public class JwtTokenVerifier {
 
-    private final DERPublicKeyProvider pubKeyProvider;
+    private final PublicKeyProvider pubKeyProvider;
 
     @Inject
-    public JwtTokenVerifier(DERPublicKeyProvider pubKeyProvider) {
+    @VisibleForTesting
+    JwtTokenVerifier(PublicKeyProvider pubKeyProvider) {
         this.pubKeyProvider = pubKeyProvider;
     }
 
     public boolean verify(String token) {
-        try {
-            Jwts.parser().setSigningKey(pubKeyProvider.get()).parseClaimsJws(token);
-            return true;
-
-        } catch (SignatureException e) {
-            return false;
-        }
+        return parseToken(token).isPresent();
     }
 
-
     public String extractLogin(String token) {
-        return Jwts.parser().setSigningKey(pubKeyProvider.get()).parseClaimsJws(token).getBody().getSubject();
+        return parseToken(token)
+                .map(Jwt::getBody)
+                .map(Claims::getSubject)
+                .get();
+    }
+
+    private Optional<Jws<Claims>> parseToken(String token) {
+        JwtParser parser;
+        try {
+            parser = Jwts.parser().setSigningKey(pubKeyProvider.get());
+        } catch(SignatureException e) {
+            Throwables.propagate(e);
+            return Optional.empty();
+        }
+        return Optional.ofNullable(parser.parseClaimsJws(token));
     }
 }

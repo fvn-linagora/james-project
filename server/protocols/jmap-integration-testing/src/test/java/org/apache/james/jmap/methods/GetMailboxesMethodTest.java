@@ -24,7 +24,6 @@ import static com.jayway.restassured.config.EncoderConfig.encoderConfig;
 import static com.jayway.restassured.config.RestAssuredConfig.newConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.hamcrest.Matchers.notNullValue;
 
 import java.io.ByteArrayInputStream;
 import java.util.Date;
@@ -42,7 +41,6 @@ import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
-import org.eclipse.jetty.servlets.CrossOriginFilter;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -172,7 +170,7 @@ public abstract class GetMailboxesMethodTest {
                 .post("/jmap")
                 .then()
                 .statusCode(200)
-                .content(equalTo("[[\"mailboxes\",{\"accountId\":null,\"state\":null,\"list\":[],\"notFound\":null},\"#0\"]]"));
+                .content(startsWith("[[\"mailboxes\",{\"accountId\":null,\"state\":null,\"list\":[],\"notFound\":null},\"#0\"]]"));
     }
 
 

@@ -30,7 +30,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.ThrowableAssert.catchThrowable;
 
-public class DERPublicKeyProviderTest {
+public class PublicKeyProviderTest {
 
     private static final String PUBLIC_PEM_KEY = "-----BEGIN PUBLIC KEY-----\n" +
             "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtlChO/nlVP27MpdkG0Bh\n" +
@@ -55,7 +55,7 @@ public class DERPublicKeyProviderTest {
                 .keystore(".").secret(".")
                 .build();
 
-        DERPublicKeyProvider sut = new DERPublicKeyProvider(configWithPEMKey);
+        PublicKeyProvider sut = new PublicKeyProvider(configWithPEMKey, new DEREncodingConverter());
 
         assertThat(sut.get()).isInstanceOf(RSAPublicKey.class);
     }
@@ -67,12 +67,12 @@ public class DERPublicKeyProviderTest {
                 .keystore(" ").secret(" ")
                 .build();
 
-        DERPublicKeyProvider sut = new DERPublicKeyProvider(configWithPEMKey);
+        PublicKeyProvider sut = new PublicKeyProvider(configWithPEMKey, new DEREncodingConverter());
 
         Throwable thrown = catchThrowable(() -> {
             sut.get();
         });
 
-        assertThat(thrown).isInstanceOf(DERPublicKeyProvider.MissingOrInvalidKeyException.class);
+        assertThat(thrown).isInstanceOf(MissingOrInvalidKeyException.class);
     }
 }

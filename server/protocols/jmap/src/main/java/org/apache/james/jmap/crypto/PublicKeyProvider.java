@@ -18,42 +18,27 @@
  ****************************************************************/
 package org.apache.james.jmap.crypto;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.james.jmap.JMAPConfiguration;
-import org.bouncycastle.openssl.PEMReader;
 
 import javax.inject.Inject;
-import java.io.IOException;
-import java.io.StringReader;
 import java.security.PublicKey;
-import java.security.interfaces.RSAPublicKey;
-import java.util.Optional;
 
-public class DERPublicKeyProvider {
+public class PublicKeyProvider {
 
     private final JMAPConfiguration config;
+    private final DEREncodingConverter encodingConverter;
 
     @Inject
-    public DERPublicKeyProvider(JMAPConfiguration config) {
+    @VisibleForTesting
+    PublicKeyProvider(JMAPConfiguration config, DEREncodingConverter encodingConverter) {
         this.config = config;
+        this.encodingConverter = encodingConverter;
     }
 
     public PublicKey get() {
-        return fromPEMtoDER(config.getJwtPublicKeyPem())
+        return encodingConverter.fromPEM(config.getJwtPublicKeyPem())
                 .orElseThrow(() -> new MissingOrInvalidKeyException());
     }
 
-    private Optional<RSAPublicKey> fromPEMtoDER(Optional<String> pemKey) {
-
-        return pemKey
-                .map(k -> new PEMReader(new StringReader(k)))
-                .map(r -> {
-                    try {
-                        return (RSAPublicKey) r.readObject();
-                    } catch (IOException e) {
-                        return null;
-                    }
-                });
-    }
-
-    public class MissingOrInvalidKeyException extends RuntimeException {}
 }

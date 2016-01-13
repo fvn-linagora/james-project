@@ -110,7 +110,4 @@ public class JettyHttpServer implements Closeable {
         }
     }
 
-
-
-
 }

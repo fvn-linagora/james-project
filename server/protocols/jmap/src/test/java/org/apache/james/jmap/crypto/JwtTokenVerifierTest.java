@@ -30,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class JwtTokenVerifierTest {
 
-    private static final String publicPEMKey = "-----BEGIN PUBLIC KEY-----\n" +
+    private static final String PUBLIC_PEM_KEY = "-----BEGIN PUBLIC KEY-----\n" +
             "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtlChO/nlVP27MpdkG0Bh\n" +
             "16XrMRf6M4NeyGa7j5+1UKm42IKUf3lM28oe82MqIIRyvskPc11NuzSor8HmvH8H\n" +
             "lhDs5DyJtx2qp35AT0zCqfwlaDnlDc/QDlZv1CoRZGpQk1Inyh6SbZwYpxxwh0fi\n" +
@@ -45,14 +45,14 @@ public class JwtTokenVerifierTest {
             "t1Tbv21ZqYM5Ht2vrhJWczFbuC-TD-8zJkXhjTmA1GVgomIX5dx1cH-dZX1wANNmshUJGHgepWlPU-5VIYxPEhb219RMLJIELMY2qN" +
             "OR8Q31ydinyqzXvCSzVJOf6T60-w";
 
-    private final DERPublicKeyProvider pubKeyProvider = new DERPublicKeyProvider(getJWTConfiguration());
+    private final PublicKeyProvider pubKeyProvider = new PublicKeyProvider(getJWTConfiguration(), new DEREncodingConverter());
 
     private JMAPConfiguration getJWTConfiguration() {
 
         return JMAPConfiguration.builder()
                 .keystore(".")
                 .secret(".")
-                .jwtPublicKeyPem(Optional.ofNullable(publicPEMKey))
+                .jwtPublicKeyPem(Optional.ofNullable(PUBLIC_PEM_KEY))
                 .build();
     }
 
