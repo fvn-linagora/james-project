@@ -170,7 +170,12 @@ public abstract class GetMailboxesMethodTest {
                 .post("/jmap")
                 .then()
                 .statusCode(200)
-                .content(startsWith("[[\"mailboxes\",{\"accountId\":null,\"state\":null,\"list\":[],\"notFound\":null},\"#0\"]]"));
+                .body("[0][0]", equalTo("mailboxes"))
+                .body("[0][1].accountId", isEmptyOrNullString())
+                .body("[0][1].state", isEmptyOrNullString())
+                .body("[0][1].notFound", isEmptyOrNullString())
+                .body("[0][1].list", hasSize(0))
+                .body("[0][2]", equalTo("#0"));
     }
 
 
