@@ -19,20 +19,22 @@
 
 package org.apache.james.http.jetty;
 
-import com.google.common.base.Throwables;
-import com.google.common.collect.Maps;
+import java.io.Closeable;
+import java.util.EnumSet;
+import java.util.function.BiConsumer;
+
+import javax.servlet.DispatcherType;
+import javax.servlet.Filter;
+import javax.servlet.Servlet;
+
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
-import javax.servlet.DispatcherType;
-import javax.servlet.Filter;
-import javax.servlet.Servlet;
-import java.io.Closeable;
-import java.util.EnumSet;
-import java.util.function.BiConsumer;
+import com.google.common.base.Throwables;
+import com.google.common.collect.Maps;
 
 public class JettyHttpServer implements Closeable {
     
@@ -59,15 +61,14 @@ public class JettyHttpServer implements Closeable {
 
     private ServletHandler buildServletHandler(Configuration configuration) {
         ServletHandler servletHandler = new ServletHandler();
-
         BiConsumer<String, ServletHolder> addServletMapping = (path, servletHolder) -> servletHandler.addServletWithMapping(servletHolder, path);
         BiConsumer<String, FilterHolder> addFilterMapping = (path, filterHolder) -> servletHandler.addFilterWithMapping(filterHolder, path, EnumSet.of(DispatcherType.REQUEST));
         Maps.transformEntries(configuration.getMappings(), this::toServletHolder).forEach(addServletMapping);
         Maps.transformEntries(configuration.getFilters(), this::toFilterHolder).forEach(addFilterMapping);
-
         return servletHandler;
     }
 
+    
     @SuppressWarnings("unchecked")
     private ServletHolder toServletHolder(String path, Object value) {
         if (value instanceof Servlet) {
@@ -109,5 +110,5 @@ public class JettyHttpServer implements Closeable {
             Throwables.propagate(e);
         }
     }
-
+    
 }
