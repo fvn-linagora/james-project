@@ -55,7 +55,7 @@ public class AccessTokenAuthenticationStrategyTest {
     }
 
     @Test
-    public void createMailboxSessionShouldNotThrowWhenAuthHeaderIsEmpty() {
+    public void createMailboxSessionShouldReturnEmptyWhenNoAuthProvided() {
         assertThat(testee.createMailboxSession(Stream.empty())).isEmpty();
     }
 
@@ -97,12 +97,12 @@ public class AccessTokenAuthenticationStrategyTest {
     }
 
     @Test
-    public void checkAuthorizationHeaderShouldReturnFalsewWhenAuthHeaderIsEmpty() {
+    public void checkAuthorizationHeaderShouldReturnFalseWhenAuthHeaderIsEmpty() {
         assertThat(testee.checkAuthorizationHeader(Stream.empty())).isFalse();
     }
 
     @Test
-    public void checkAuthorizationHeaderShouldReturnFalsewWhenAuthHeaderIsInvalid() {
+    public void checkAuthorizationHeaderShouldReturnFalseWhenAuthHeaderIsInvalid() {
         assertThat(testee.checkAuthorizationHeader(Stream.of("bad"))).isFalse();
     }
 

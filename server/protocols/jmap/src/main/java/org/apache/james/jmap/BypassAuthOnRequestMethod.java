@@ -105,10 +105,6 @@ public class BypassAuthOnRequestMethod implements Filter {
             reasons.add(r -> r.getMethod().equalsIgnoreCase(requestMethod.trim()));
             return new InitializedBuilder(this);
         }
-
-        public BypassAuthOnRequestMethod only() {
-            return new BypassAuthOnRequestMethod(this.authenticationFilter, this.reasons.build());
-        }
     }
 
     public static class InitializedBuilder {
@@ -123,8 +119,7 @@ public class BypassAuthOnRequestMethod implements Filter {
         }
 
         public BypassAuthOnRequestMethod only() {
-            return builder.only();
+            return new BypassAuthOnRequestMethod(builder.authenticationFilter, builder.reasons.build());
         }
-
     }
 }
