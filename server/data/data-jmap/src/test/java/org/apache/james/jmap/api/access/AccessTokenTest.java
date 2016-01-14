@@ -21,18 +21,18 @@ package org.apache.james.jmap.api.access;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.apache.james.jmap.api.access.exceptions.NotAnUUIDException;
+import org.apache.james.jmap.api.access.exceptions.NotAnAccessTokenException;
 import org.junit.Test;
 
 public class AccessTokenTest {
 
-    @Test(expected=NotAnUUIDException.class)
-    public void fromStringShouldThrowWhenNotAnUUID() throws NotAnUUIDException {
+    @Test(expected=NotAnAccessTokenException.class)
+    public void fromStringShouldThrowWhenNotAnUUID() throws NotAnAccessTokenException {
         AccessToken.fromString("bad");
     }
 
     @Test
-    public void fromStringShouldWork() throws NotAnUUIDException {
+    public void fromStringShouldWork() throws NotAnAccessTokenException {
         String expectedToken = "dab315ad-a59a-4107-8d00-0fef9a0745b8";
 
         AccessToken accessToken = AccessToken.fromString(expectedToken);

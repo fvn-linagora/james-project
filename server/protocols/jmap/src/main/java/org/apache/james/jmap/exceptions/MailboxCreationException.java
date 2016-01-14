@@ -17,12 +17,11 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.api.access.exceptions;
+package org.apache.james.jmap.exceptions;
 
-public class NotAnUUIDException extends RuntimeException {
+public class MailboxCreationException extends RuntimeException {
 
-    public NotAnUUIDException(Exception e) {
+    public MailboxCreationException(Exception e) {
         super(e);
     }
-
 }

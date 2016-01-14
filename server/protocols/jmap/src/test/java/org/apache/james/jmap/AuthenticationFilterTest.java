@@ -113,6 +113,17 @@ public class AuthenticationFilterTest {
         verify(mockedResponse).sendError(HttpServletResponse.SC_UNAUTHORIZED);
     }
 
+    @Test
+    public void filterShouldReturnUnauthorizedWhenNoStrategy() throws Exception {
+        when(mockedRequest.getHeader("Authorization"))
+                .thenReturn(TOKEN);
+
+        AuthenticationFilter sut = new AuthenticationFilter(ImmutableList.of());
+        sut.doFilter(mockedRequest, mockedResponse, filterChain);
+
+        verify(mockedResponse).sendError(HttpServletResponse.SC_UNAUTHORIZED);
+    }
+
     private class FakeAuthenticationStrategy implements AuthenticationStrategy {
 
         private final boolean isAuthorized;
@@ -122,7 +133,9 @@ public class AuthenticationFilterTest {
         }
 
         @Override
-        public Optional<MailboxSession> createMailboxSession(Stream<String> requestHeaders) { return Optional.empty(); }
+        public Optional<MailboxSession> createMailboxSession(Stream<String> requestHeaders) {
+            return Optional.empty();
+        }
 
         @Override
         public boolean checkAuthorizationHeader(Stream<String> requestHeaders) {

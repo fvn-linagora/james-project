@@ -40,7 +40,7 @@ public class BypassAuthOnRequestMethod implements Filter {
     private final AuthenticationFilter authenticationFilter;
     private final List<Predicate<HttpServletRequest>> listOfReasonsToBypassAuth;
 
-    private BypassAuthOnRequestMethod(AuthenticationFilter authenticationFilter, List<Predicate<HttpServletRequest>> listOfReasonsToBypassAuth) {
+    BypassAuthOnRequestMethod(AuthenticationFilter authenticationFilter, List<Predicate<HttpServletRequest>> listOfReasonsToBypassAuth) {
 
         this.authenticationFilter = authenticationFilter;
         this.listOfReasonsToBypassAuth = listOfReasonsToBypassAuth;
@@ -93,10 +93,10 @@ public class BypassAuthOnRequestMethod implements Filter {
 
 
     public static class Builder {
-        private ImmutableList.Builder<Predicate<HttpServletRequest>> reasons;
+        private ImmutableList.Builder<Predicate<HttpServletRequest>> reasons = new ImmutableList.Builder<>();
         private final AuthenticationFilter authenticationFilter;
 
-        public Builder(AuthenticationFilter authenticationFilter) {
+        private Builder(AuthenticationFilter authenticationFilter) {
             this.authenticationFilter = authenticationFilter;
         }
 
@@ -104,6 +104,10 @@ public class BypassAuthOnRequestMethod implements Filter {
             Preconditions.checkArgument(! Strings.isNullOrEmpty(requestMethod), "'requestMethod' is mandatory");
             reasons.add(r -> r.getMethod().equalsIgnoreCase(requestMethod.trim()));
             return new InitializedBuilder(this);
+        }
+
+        public BypassAuthOnRequestMethod only() {
+            return new BypassAuthOnRequestMethod(this.authenticationFilter, this.reasons.build());
         }
     }
 
@@ -119,7 +123,8 @@ public class BypassAuthOnRequestMethod implements Filter {
         }
 
         public BypassAuthOnRequestMethod only() {
-            return new BypassAuthOnRequestMethod(builder.authenticationFilter, builder.reasons.build());
+            return builder.only();
         }
+
     }
 }

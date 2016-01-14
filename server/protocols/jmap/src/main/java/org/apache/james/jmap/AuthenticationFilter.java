@@ -19,6 +19,8 @@
 package org.apache.james.jmap;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.james.jmap.exceptions.MailboxCreationException;
+import org.apache.james.jmap.exceptions.UnauthorizedException;
 import org.apache.james.mailbox.MailboxSession;
 
 import javax.inject.Inject;
@@ -59,9 +61,6 @@ public class AuthenticationFilter implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
 
-//        // Bypass auth pipeline for request with method/verb OPTIONS
-//        boolean isCORSPreflightRequest = "options".equals(httpRequest.getMethod().trim().toLowerCase(Locale.US));
-
         try {
             HttpServletRequest requestWithSession = authMethods.stream()
                     .filter(auth -> auth.checkAuthorizationHeader(getAuthHeaders(httpRequest)))
@@ -70,16 +69,16 @@ public class AuthenticationFilter implements Filter {
                     .orElseThrow(UnauthorizedException::new);
             chain.doFilter(requestWithSession, response);
 
-        } catch (UnauthorizedException e) {
+        } catch (UnauthorizedException | MailboxCreationException e) {
             httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED);
         }
 
     }
 
     private Stream<String> getAuthHeaders(HttpServletRequest httpRequest) {
-        Enumeration<String> authHeadersIterator = httpRequest.getHeaders(AUTHORIZATION_HEADERS);
+        Enumeration<String> authHeaders = httpRequest.getHeaders(AUTHORIZATION_HEADERS);
 
-        return authHeadersIterator != null && authHeadersIterator.hasMoreElements() ? Collections.list(authHeadersIterator).stream() : Stream.of();
+        return authHeaders != null && authHeaders.hasMoreElements() ? Collections.list(authHeaders).stream() : Stream.of();
     }
 
     private HttpServletRequest addSessionToRequest(HttpServletRequest httpRequest, Optional<MailboxSession> mailboxSession) {

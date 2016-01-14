@@ -46,10 +46,11 @@ public class JwtTokenVerifier {
     }
 
     private Optional<Jws<Claims>> parseToken(String token) {
-        JwtParser parser;
         try {
-            parser = Jwts.parser().setSigningKey(pubKeyProvider.get());
-            return Optional.ofNullable(parser.parseClaimsJws(token));
+            return Optional.ofNullable(Jwts
+                    .parser()
+                    .setSigningKey(pubKeyProvider.get())
+                    .parseClaimsJws(token));
         } catch(ExpiredJwtException | UnsupportedJwtException | MalformedJwtException | SignatureException e ) {
             return Optional.empty();
         }

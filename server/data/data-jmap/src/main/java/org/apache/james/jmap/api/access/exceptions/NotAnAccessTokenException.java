@@ -16,44 +16,12 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap;
 
-import java.io.IOException;
+package org.apache.james.jmap.api.access.exceptions;
 
-import javax.inject.Inject;
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
+public class NotAnAccessTokenException extends RuntimeException {
 
-public class BypassOnPostFilter implements Filter {
-    
-    private Filter nestedFilter;
-
-    @Inject
-    public BypassOnPostFilter(AuthenticationFilter nestedFilter) {
-        this.nestedFilter = nestedFilter;
+    public NotAnAccessTokenException(Exception e) {
+        super(e);
     }
-
-    @Override
-    public void init(FilterConfig filterConfig) throws ServletException {
-    }
-
-    @Override
-    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-        HttpServletRequest httpRequest = (HttpServletRequest)request;
-        if ("POST".equals(httpRequest.getMethod())) {
-            chain.doFilter(request, response);
-        } else {
-            nestedFilter.doFilter(httpRequest, response, chain);
-        }
-    }
-
-    @Override
-    public void destroy() {
-    }
-
 }

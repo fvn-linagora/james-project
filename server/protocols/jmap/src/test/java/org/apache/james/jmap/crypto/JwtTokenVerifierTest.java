@@ -18,15 +18,16 @@
  ****************************************************************/
 package org.apache.james.jmap.crypto;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.apache.james.jmap.JMAPConfiguration;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.security.Security;
 import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 public class JwtTokenVerifierTest {
 
@@ -39,14 +40,24 @@ public class JwtTokenVerifierTest {
             "U1LZUUbJW9/CH45YXz82CYqkrfbnQxqRb2iVbVjs/sHopHd1NTiCfUtwvcYJiBVj\n" +
             "kwIDAQAB\n" +
             "-----END PUBLIC KEY-----";
-    public static final String VALID_TOKEN = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIn0.T04BTk" +
+    private static final String VALID_TOKEN = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIn0.T04BTk" +
             "LXkJj24coSZkK13RfG25lpvmSl2MJ7N10KpBk9_-95EGYZdog-BDAn3PJzqVw52z-Bwjh4VOj1-j7cURu0cT4jXehhUrlCxS4n7QHZD" +
             "N_bsEYGu7KzjWTpTsUiHe-rN7izXVFxDGG1TGwlmBCBnPW-EFCf9ylUsJi0r2BKNdaaPRfMIrHptH1zJBkkUziWpBN1RNLjmvlAUf49" +
             "t1Tbv21ZqYM5Ht2vrhJWczFbuC-TD-8zJkXhjTmA1GVgomIX5dx1cH-dZX1wANNmshUJGHgepWlPU-5VIYxPEhb219RMLJIELMY2qN" +
             "OR8Q31ydinyqzXvCSzVJOf6T60-w";
 
-    private final PublicKeyProvider pubKeyProvider = new PublicKeyProvider(getJWTConfiguration(), new DEREncodingConverter());
-    private final JwtTokenVerifier sut = new JwtTokenVerifier(pubKeyProvider);
+    private JwtTokenVerifier sut;
+
+    @BeforeClass
+    public static void init() {
+        Security.addProvider(new BouncyCastleProvider());
+    }
+
+    @Before
+    public void setup() {
+        PublicKeyProvider pubKeyProvider = new PublicKeyProvider(getJWTConfiguration(), new DEREncodingConverter());
+        sut = new JwtTokenVerifier(pubKeyProvider);
+    }
 
     private JMAPConfiguration getJWTConfiguration() {
 
@@ -55,11 +66,6 @@ public class JwtTokenVerifierTest {
                 .secret(".")
                 .jwtPublicKeyPem(Optional.ofNullable(PUBLIC_PEM_KEY))
                 .build();
-    }
-
-    @Before
-    public void init() {
-        Security.addProvider(new BouncyCastleProvider());
     }
 
     @Test

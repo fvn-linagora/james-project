@@ -21,6 +21,7 @@ package org.apache.james.jmap;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import org.apache.james.jmap.crypto.JwtTokenVerifier;
+import org.apache.james.jmap.exceptions.MailboxCreationException;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
@@ -34,7 +35,7 @@ import java.util.stream.Stream;
 public class JWTAuthenticationStrategy implements AuthenticationStrategy {
 
     private static final Logger LOG = LoggerFactory.getLogger(JWTAuthenticationStrategy.class);
-    public static final String AUTHORIZATION_HEADER_PREFIX = "Bearer ";
+    @VisibleForTesting static final String AUTHORIZATION_HEADER_PREFIX = "Bearer ";
     private final JwtTokenVerifier tokenManager;
     private final MailboxManager mailboxManager;
 
@@ -57,8 +58,7 @@ public class JWTAuthenticationStrategy implements AuthenticationStrategy {
                     try {
                         return mailboxManager.createSystemSession(l, LOG);
                     } catch (MailboxException e) {
-                        Throwables.propagate(e);
-                        return null;
+                        throw new MailboxCreationException(e);
                     }
                 });
 
@@ -74,7 +74,6 @@ public class JWTAuthenticationStrategy implements AuthenticationStrategy {
 
     private Stream<String> extractTokensFromAuthHeaders(Stream<String> authHeaders) {
         return authHeaders
-                // extract valid tokens
                 .filter(h -> h.startsWith(AUTHORIZATION_HEADER_PREFIX))
                 .map(h -> h.substring(AUTHORIZATION_HEADER_PREFIX.length()));
     }

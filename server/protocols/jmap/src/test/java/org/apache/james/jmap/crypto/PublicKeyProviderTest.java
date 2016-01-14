@@ -18,17 +18,18 @@
  ****************************************************************/
 package org.apache.james.jmap.crypto;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.ThrowableAssert.catchThrowable;
+
 import org.apache.james.jmap.JMAPConfiguration;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.security.Security;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.ThrowableAssert.catchThrowable;
 
 public class PublicKeyProviderTest {
 
@@ -42,8 +43,8 @@ public class PublicKeyProviderTest {
             "kwIDAQAB\n" +
             "-----END PUBLIC KEY-----";
 
-    @Before
-    public void init() {
+    @BeforeClass
+    public static void init() {
         Security.addProvider(new BouncyCastleProvider());
     }
 
@@ -69,10 +70,6 @@ public class PublicKeyProviderTest {
 
         PublicKeyProvider sut = new PublicKeyProvider(configWithPEMKey, new DEREncodingConverter());
 
-        Throwable thrown = catchThrowable(() -> {
-            sut.get();
-        });
-
-        assertThat(thrown).isInstanceOf(MissingOrInvalidKeyException.class);
+        assertThatThrownBy(() -> sut.get()).isExactlyInstanceOf(MissingOrInvalidKeyException.class);
     }
 }

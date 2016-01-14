@@ -19,42 +19,115 @@
 package org.apache.james.jmap;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-import org.apache.james.jmap.api.access.exceptions.NotAnUUIDException;
+import org.apache.james.jmap.api.access.AccessToken;
+import org.apache.james.jmap.api.access.exceptions.NotAnAccessTokenException;
 import org.apache.james.jmap.crypto.AccessTokenManagerImpl;
-import org.apache.james.jmap.memory.access.MemoryAccessTokenRepository;
+import org.apache.james.jmap.exceptions.MailboxCreationException;
 import org.apache.james.mailbox.MailboxManager;
-import org.apache.james.mailbox.exception.BadCredentialsException;
+import org.apache.james.mailbox.MailboxSession;
+import org.apache.james.mailbox.exception.MailboxException;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
 
-import java.util.concurrent.TimeUnit;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 public class AccessTokenAuthenticationStrategyTest {
 
-    private MemoryAccessTokenRepository accessTokenRepository;
-    private AccessTokenManagerImpl accessTokenManager;
+    private AccessTokenManagerImpl mockedAccessTokenManager;
+    private MailboxManager mockedMailboxManager;
     private AccessTokenAuthenticationStrategy testee;
 
     @Before
     public void setup() {
-        accessTokenRepository = new MemoryAccessTokenRepository(TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS));
-        accessTokenManager = new AccessTokenManagerImpl(accessTokenRepository);
-        MailboxManager mockedMailboxManager = mock(MailboxManager.class);
+        mockedAccessTokenManager = mock(AccessTokenManagerImpl.class);
+        mockedMailboxManager = mock(MailboxManager.class);
 
-        testee = new AccessTokenAuthenticationStrategy(accessTokenManager, mockedMailboxManager);
+        testee = new AccessTokenAuthenticationStrategy(mockedAccessTokenManager, mockedMailboxManager);
     }
-
 
     @Test
-    public void createMailboxSessionShouldNotThrowWhenAuthHeaderIsEmpty() throws Exception {
-        assertThat(testee.createMailboxSession(Stream.empty()).isPresent()).isFalse();
+    public void createMailboxSessionShouldNotThrowWhenAuthHeaderIsEmpty() {
+        assertThat(testee.createMailboxSession(Stream.empty())).isEmpty();
     }
 
-    @Test(expected=NotAnUUIDException.class)
+    @Test(expected=NotAnAccessTokenException.class)
     public void createMailboxSessionShouldThrowWhenAuthHeaderIsNotAnUUID() throws Exception {
         testee.createMailboxSession(Stream.of("bad"));
+    }
+
+    @Test
+    public void createMailboxSessionShouldThrowWhenMailboxExceptionHasOccurred() throws Exception {
+        String username = "username";
+        when(mockedMailboxManager.createSystemSession(eq(username), any(Logger.class)))
+                .thenThrow(MailboxException.class);
+
+        UUID authHeader = UUID.randomUUID();
+        when(mockedAccessTokenManager.getUsernameFromToken(AccessToken.fromString(authHeader.toString())))
+                .thenReturn(username);
+
+        assertThatThrownBy(() -> testee.createMailboxSession(Stream.of(authHeader.toString())))
+                .isExactlyInstanceOf(MailboxCreationException.class);
+    }
+
+    @Test
+    public void createMailboxSessionShouldReturnWhenAuthHeadersAreValid() throws Exception {
+        String username = "123456789";
+        MailboxSession fakeMailboxSession = mock(MailboxSession.class);
+
+        when(mockedMailboxManager.createSystemSession(eq(username), any(Logger.class)))
+                .thenReturn(fakeMailboxSession);
+
+        UUID authHeader = UUID.randomUUID();
+        when(mockedAccessTokenManager.getUsernameFromToken(AccessToken.fromString(authHeader.toString())))
+                .thenReturn(username);
+
+        Optional<MailboxSession> result = testee.createMailboxSession(Stream.of(authHeader.toString()));
+        assertThat(result)
+                .isPresent()
+                .contains(fakeMailboxSession);
+    }
+
+    @Test
+    public void checkAuthorizationHeaderShouldReturnFalsewWhenAuthHeaderIsEmpty() {
+        assertThat(testee.checkAuthorizationHeader(Stream.empty())).isFalse();
+    }
+
+    @Test
+    public void checkAuthorizationHeaderShouldReturnFalsewWhenAuthHeaderIsInvalid() {
+        assertThat(testee.checkAuthorizationHeader(Stream.of("bad"))).isFalse();
+    }
+
+    @Test
+    public void checkAuthorizationHeaderShouldReturnFalseWhenAuthHeadersAreInvalid() {
+        assertThat(testee.checkAuthorizationHeader(Stream.of("bad", "alsobad"))).isFalse();
+    }
+
+    @Test
+    public void checkAuthorizationHeaderShouldReturnTrueWhenAuthHeaderIsValid() {
+
+        String validToken = UUID.randomUUID().toString();
+        when(mockedAccessTokenManager.isValid(AccessToken.fromString(validToken)))
+                .thenReturn(true);
+
+        assertThat(testee.checkAuthorizationHeader(Stream.of(validToken))).isTrue();
+    }
+
+    @Test
+    public void checkAuthorizationHeaderShouldReturnTrueWhenOneAuthHeaderIsValid() {
+
+        String validToken = UUID.randomUUID().toString();
+        when(mockedAccessTokenManager.isValid(AccessToken.fromString(validToken)))
+                .thenReturn(true);
+
+        assertThat(testee.checkAuthorizationHeader(Stream.of("bad", validToken))).isTrue();
     }
 }

@@ -19,10 +19,10 @@
 package org.apache.james.jmap;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Throwables;
 import org.apache.james.jmap.api.AccessTokenManager;
 import org.apache.james.jmap.api.access.AccessToken;
-import org.apache.james.jmap.api.access.exceptions.NotAnUUIDException;
+import org.apache.james.jmap.exceptions.MailboxCreationException;
+import org.apache.james.jmap.api.access.exceptions.NotAnAccessTokenException;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
@@ -58,21 +58,28 @@ public class AccessTokenAuthenticationStrategy implements AuthenticationStrategy
                     try {
                         return mailboxManager.createSystemSession(user, LOG);
                     } catch (MailboxException e) {
-                        throw Throwables.propagate(e);
+                        throw new MailboxCreationException(e);
                     }
                 });
     }
 
     @Override
     public boolean checkAuthorizationHeader(Stream<String> authHeaders) {
+        return authHeaders
+                .map(this::accessTokenFrom)
+                .anyMatch(this::isValid);
+    }
+
+    private Optional<AccessToken> accessTokenFrom(String header) {
         try {
-            return authHeaders
-                    .map(AccessToken::fromString)
-                    .map(accessTokenManager::isValid)
-                    .findAny()
-                    .orElse(false);
-        } catch (NotAnUUIDException e) {
-            return false;
+            return Optional.of(AccessToken.fromString(header));
+        } catch (NotAnAccessTokenException e) {
+            return Optional.empty();
         }
+    }
+
+    private boolean isValid(Optional<AccessToken> token) {
+        return token.map(accessTokenManager::isValid)
+            .orElse(false);
     }
 }
