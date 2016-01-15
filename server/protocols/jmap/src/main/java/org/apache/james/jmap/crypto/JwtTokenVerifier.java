@@ -54,13 +54,9 @@ public class JwtTokenVerifier {
     }
 
     private Jws<Claims> parseToken(String token) throws JwtException {
-        try {
-            return Jwts
-                    .parser()
-                    .setSigningKey(pubKeyProvider.get())
-                    .parseClaimsJws(token);
-        } catch (ExpiredJwtException | UnsupportedJwtException | MalformedJwtException | SignatureException e) {
-            throw e;
-        }
+        return Jwts
+                .parser()
+                .setSigningKey(pubKeyProvider.get())
+                .parseClaimsJws(token);
     }
 }

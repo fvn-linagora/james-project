@@ -36,7 +36,7 @@ public class PublicKeyProvider {
         this.reader = reader;
     }
 
-    public PublicKey get() {
+    public PublicKey get() throws MissingOrInvalidKeyException {
         return reader.fromPEM(config.getJwtPublicKeyPem())
                 .orElseThrow(() -> new MissingOrInvalidKeyException());
     }

@@ -31,8 +31,8 @@ import java.util.stream.Stream;
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.jmap.api.access.exceptions.NotAnAccessTokenException;
 import org.apache.james.jmap.crypto.AccessTokenManagerImpl;
-import org.apache.james.jmap.exceptions.MailboxCreationException;
-import org.apache.james.jmap.exceptions.NoAuthHeaderException;
+import org.apache.james.jmap.exceptions.MailboxSessionCreationException;
+import org.apache.james.jmap.exceptions.NoValidAuthHeaderException;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
@@ -57,7 +57,7 @@ public class AccessTokenAuthenticationStrategyTest {
     @Test
     public void createMailboxSessionShouldThrowWhenNoAuthProvided() {
         assertThatThrownBy(() -> testee.createMailboxSession(Stream.empty()))
-            .isExactlyInstanceOf(NoAuthHeaderException.class);
+            .isExactlyInstanceOf(NoValidAuthHeaderException.class);
     }
 
     @Test
@@ -77,7 +77,7 @@ public class AccessTokenAuthenticationStrategyTest {
                 .thenReturn(username);
 
         assertThatThrownBy(() -> testee.createMailboxSession(Stream.of(authHeader.toString())))
-                .isExactlyInstanceOf(MailboxCreationException.class);
+                .isExactlyInstanceOf(MailboxSessionCreationException.class);
     }
 
     @Test

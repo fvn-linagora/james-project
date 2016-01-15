@@ -34,8 +34,8 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.james.jmap.exceptions.MailboxCreationException;
-import org.apache.james.jmap.exceptions.NoAuthHeaderException;
+import org.apache.james.jmap.exceptions.MailboxSessionCreationException;
+import org.apache.james.jmap.exceptions.NoValidAuthHeaderException;
 import org.apache.james.jmap.exceptions.UnauthorizedException;
 import org.apache.james.mailbox.MailboxSession;
 import org.slf4j.Logger;
@@ -77,7 +77,7 @@ public class AuthenticationFilter implements Filter {
                     .orElseThrow(UnauthorizedException::new);
             chain.doFilter(requestWithSession, response);
 
-        } catch (UnauthorizedException | NoAuthHeaderException | MailboxCreationException | JwtException e) {
+        } catch (UnauthorizedException | NoValidAuthHeaderException | MailboxSessionCreationException | JwtException e) {
             LOGGER.error("Exception occurred during authentication process", e);
             httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED);
         }
@@ -87,7 +87,7 @@ public class AuthenticationFilter implements Filter {
     private Stream<String> getAuthHeaders(HttpServletRequest httpRequest) {
         Enumeration<String> authHeaders = httpRequest.getHeaders(AUTHORIZATION_HEADERS);
 
-        return authHeaders != null && authHeaders.hasMoreElements() ? Collections.list(authHeaders).stream() : Stream.of();
+        return authHeaders != null ? Collections.list(authHeaders).stream() : Stream.of();
     }
 
     private HttpServletRequest addSessionToRequest(HttpServletRequest httpRequest, MailboxSession mailboxSession) {

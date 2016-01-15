@@ -26,8 +26,8 @@ import javax.inject.Inject;
 import org.apache.james.jmap.api.AccessTokenManager;
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.jmap.api.access.exceptions.NotAnAccessTokenException;
-import org.apache.james.jmap.exceptions.MailboxCreationException;
-import org.apache.james.jmap.exceptions.NoAuthHeaderException;
+import org.apache.james.jmap.exceptions.MailboxSessionCreationException;
+import org.apache.james.jmap.exceptions.NoValidAuthHeaderException;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
@@ -62,10 +62,10 @@ public class AccessTokenAuthenticationStrategy implements AuthenticationStrategy
             try {
                 return mailboxManager.createSystemSession(username.get(), LOG);
             } catch (MailboxException e) {
-                throw new MailboxCreationException(e);
+                throw new MailboxSessionCreationException(e);
             }
         }
-        throw new NoAuthHeaderException();
+        throw new NoValidAuthHeaderException();
     }
 
     @Override

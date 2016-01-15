@@ -36,7 +36,12 @@ public class PublicKeyReader {
 
     private Optional<RSAPublicKey> publicKeyFrom(PEMReader reader) {
         try {
-            return Optional.ofNullable((RSAPublicKey) reader.readObject());
+            Object readPEM = reader.readObject();
+            RSAPublicKey rsaPublicKey = null;
+            if (readPEM instanceof RSAPublicKey) {
+                rsaPublicKey = (RSAPublicKey) readPEM;
+            }
+            return Optional.ofNullable(rsaPublicKey);
         } catch (IOException e) {
             return Optional.empty();
         }

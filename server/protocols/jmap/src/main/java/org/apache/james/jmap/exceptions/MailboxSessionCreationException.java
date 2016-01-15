@@ -19,9 +19,9 @@
 
 package org.apache.james.jmap.exceptions;
 
-public class MailboxCreationException extends RuntimeException {
+public class MailboxSessionCreationException extends RuntimeException {
 
-    public MailboxCreationException(Exception e) {
+    public MailboxSessionCreationException(Exception e) {
         super(e);
     }
 }

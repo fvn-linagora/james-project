@@ -28,8 +28,8 @@ import static org.mockito.Mockito.when;
 import java.util.stream.Stream;
 
 import org.apache.james.jmap.crypto.JwtTokenVerifier;
-import org.apache.james.jmap.exceptions.MailboxCreationException;
-import org.apache.james.jmap.exceptions.NoAuthHeaderException;
+import org.apache.james.jmap.exceptions.MailboxSessionCreationException;
+import org.apache.james.jmap.exceptions.NoValidAuthHeaderException;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
@@ -42,54 +42,54 @@ public class JWTAuthenticationStrategyTest {
 
     private JWTAuthenticationStrategy testee;
     private MailboxManager mockedMailboxManager;
-    private JwtTokenVerifier stubTokenManager;
+    private JwtTokenVerifier stubTokenVerifier;
 
     @Before
     public void setup() {
         mockedMailboxManager = mock(MailboxManager.class);
 
-        stubTokenManager = mock(JwtTokenVerifier.class);
+        stubTokenVerifier = mock(JwtTokenVerifier.class);
 
-        testee = new JWTAuthenticationStrategy(stubTokenManager, mockedMailboxManager);
+        testee = new JWTAuthenticationStrategy(stubTokenVerifier, mockedMailboxManager);
     }
 
 
     @Test
     public void createMailboxSessionShouldThrowWhenAuthHeaderIsEmpty() throws Exception {
         assertThatThrownBy(() -> testee.createMailboxSession(Stream.empty()))
-            .isExactlyInstanceOf(NoAuthHeaderException.class);
+            .isExactlyInstanceOf(NoValidAuthHeaderException.class);
     }
 
     @Test
     public void createMailboxSessionShouldReturnEmptyWhenAuthHeaderIsInvalid() throws Exception {
         assertThatThrownBy(() -> testee.createMailboxSession(Stream.of("bad")))
-            .isExactlyInstanceOf(NoAuthHeaderException.class);
+            .isExactlyInstanceOf(NoValidAuthHeaderException.class);
     }
 
     @Test
     public void createMailboxSessionShouldThrowWhenMailboxExceptionHasOccurred() throws Exception {
         String username = "username";
-        String fakeAuthHeader = "blabla";
-        String fakeAuthHeaderWithPrefix = JWTAuthenticationStrategy.AUTHORIZATION_HEADER_PREFIX + fakeAuthHeader;
+        String validAuthHeader = "valid";
+        String fakeAuthHeaderWithPrefix = JWTAuthenticationStrategy.AUTHORIZATION_HEADER_PREFIX + validAuthHeader;
 
-        when(stubTokenManager.verify(fakeAuthHeader)).thenReturn(true);
-        when(stubTokenManager.extractLogin(fakeAuthHeader)).thenReturn(username);
+        when(stubTokenVerifier.verify(validAuthHeader)).thenReturn(true);
+        when(stubTokenVerifier.extractLogin(validAuthHeader)).thenReturn(username);
         when(mockedMailboxManager.createSystemSession(eq(username), any(Logger.class)))
                 .thenThrow(new MailboxException());
 
         assertThatThrownBy(() -> testee.createMailboxSession(Stream.of(fakeAuthHeaderWithPrefix)))
-                .isExactlyInstanceOf(MailboxCreationException.class);
+                .isExactlyInstanceOf(MailboxSessionCreationException.class);
     }
 
     @Test
     public void createMailboxSessionShouldReturnWhenAuthHeadersAreValid() throws Exception {
         String username = "123456789";
-        String fakeAuthHeader = "blabla";
-        String fakeAuthHeaderWithPrefix = JWTAuthenticationStrategy.AUTHORIZATION_HEADER_PREFIX + fakeAuthHeader;
+        String validAuthHeader = "valid";
+        String fakeAuthHeaderWithPrefix = JWTAuthenticationStrategy.AUTHORIZATION_HEADER_PREFIX + validAuthHeader;
         MailboxSession fakeMailboxSession = mock(MailboxSession.class);
 
-        when(stubTokenManager.verify(fakeAuthHeader)).thenReturn(true);
-        when(stubTokenManager.extractLogin(fakeAuthHeader)).thenReturn(username);
+        when(stubTokenVerifier.verify(validAuthHeader)).thenReturn(true);
+        when(stubTokenVerifier.extractLogin(validAuthHeader)).thenReturn(username);
         when(mockedMailboxManager.createSystemSession(eq(username), any(Logger.class)))
                 .thenReturn(fakeMailboxSession);
 
@@ -103,47 +103,47 @@ public class JWTAuthenticationStrategyTest {
     }
 
     @Test
-    public void checkAuthorizationHeaderShouldReturnFalsewWhenAuthHeaderIsInvalid() {
-        String fakeAuthHeader = "blabla";
-        String fakeAuthHeaderWithPrefix = JWTAuthenticationStrategy.AUTHORIZATION_HEADER_PREFIX + fakeAuthHeader;
+    public void checkAuthorizationHeaderShouldReturnFalseWhenAuthHeaderIsInvalid() {
+        String wrongAuthHeader = "invalid";
+        String fakeAuthHeaderWithPrefix = JWTAuthenticationStrategy.AUTHORIZATION_HEADER_PREFIX + wrongAuthHeader;
 
-        when(stubTokenManager.verify(fakeAuthHeader)).thenReturn(false);
+        when(stubTokenVerifier.verify(wrongAuthHeader)).thenReturn(false);
 
         assertThat(testee.checkAuthorizationHeader(Stream.of(fakeAuthHeaderWithPrefix))).isFalse();
     }
 
     @Test
     public void checkAuthorizationHeaderShouldReturnFalseWhenAuthHeadersAreInvalid() {
-        String fakeAuthHeader = "blabla";
-        String fakeAuthHeader2 = "blabla2";
+        String wrongAuthHeader = "invalid";
+        String invalidAuthHeader = "INVALID";
 
-        when(stubTokenManager.verify(fakeAuthHeader)).thenReturn(false);
-        when(stubTokenManager.verify(fakeAuthHeader2)).thenReturn(false);
+        when(stubTokenVerifier.verify(wrongAuthHeader)).thenReturn(false);
+        when(stubTokenVerifier.verify(invalidAuthHeader)).thenReturn(false);
 
-        Stream<String> authHeadersStream = Stream.of(fakeAuthHeader, fakeAuthHeader2)
+        Stream<String> authHeadersStream = Stream.of(wrongAuthHeader, invalidAuthHeader)
                 .map(h -> JWTAuthenticationStrategy.AUTHORIZATION_HEADER_PREFIX + h);
         assertThat(testee.checkAuthorizationHeader(authHeadersStream)).isFalse();
     }
 
     @Test
     public void checkAuthorizationHeaderShouldReturnTrueWhenAuthHeaderIsValid() {
-        String validAuthHeader = "blabla";
+        String validAuthHeader = "valid";
         String validAuthHeaderWithPrefix = JWTAuthenticationStrategy.AUTHORIZATION_HEADER_PREFIX + validAuthHeader;
 
-        when(stubTokenManager.verify(validAuthHeader)).thenReturn(true);
+        when(stubTokenVerifier.verify(validAuthHeader)).thenReturn(true);
 
         assertThat(testee.checkAuthorizationHeader(Stream.of(validAuthHeaderWithPrefix))).isTrue();
     }
 
     @Test
     public void checkAuthorizationHeaderShouldReturnTrueWhenOneAuthHeaderIsValid() {
-        String fakeAuthHeader = "blabla";
-        String validAuthHeader = "blabla2";
+        String dummyAuthHeader = "invalid";
+        String validAuthHeader = "correct";
 
-        when(stubTokenManager.verify(fakeAuthHeader)).thenReturn(false);
-        when(stubTokenManager.verify(validAuthHeader)).thenReturn(true);
+        when(stubTokenVerifier.verify(dummyAuthHeader)).thenReturn(false);
+        when(stubTokenVerifier.verify(validAuthHeader)).thenReturn(true);
 
-        Stream<String> authHeadersStream = Stream.of(fakeAuthHeader, validAuthHeader)
+        Stream<String> authHeadersStream = Stream.of(dummyAuthHeader, validAuthHeader)
                 .map(h -> JWTAuthenticationStrategy.AUTHORIZATION_HEADER_PREFIX + h);
         assertThat(testee.checkAuthorizationHeader(authHeadersStream)).isTrue();
     }

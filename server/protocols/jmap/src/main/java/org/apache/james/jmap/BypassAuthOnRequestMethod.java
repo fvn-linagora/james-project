@@ -56,23 +56,24 @@ public class BypassAuthOnRequestMethod implements Filter {
             reasons.add(r -> r.getMethod().equalsIgnoreCase(trimmedRequestMethod));
             return new InitializedBuilder(this);
         }
+
+        public class InitializedBuilder {
+            private final Builder builder;
+
+            private InitializedBuilder(Builder builder) {
+                this.builder = builder;
+            }
+
+            public InitializedBuilder and(String requestMethod) {
+                return builder.on(requestMethod);
+            }
+
+            public BypassAuthOnRequestMethod only() {
+                return new BypassAuthOnRequestMethod(builder.authenticationFilter, builder.reasons.build());
+            }
+        }
     }
 
-    public static class InitializedBuilder {
-        private final Builder builder;
-
-        private InitializedBuilder(Builder builder) {
-            this.builder = builder;
-        }
-
-        public InitializedBuilder and(String requestMethod) {
-            return builder.on(requestMethod);
-        }
-
-        public BypassAuthOnRequestMethod only() {
-            return new BypassAuthOnRequestMethod(builder.authenticationFilter, builder.reasons.build());
-        }
-    }
 
     private final AuthenticationFilter authenticationFilter;
     private final List<Predicate<HttpServletRequest>> listOfReasonsToBypassAuth;

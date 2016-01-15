@@ -19,5 +19,5 @@
 
 package org.apache.james.jmap.exceptions;
 
-public class NoAuthHeaderException extends RuntimeException {
+public class NoValidAuthHeaderException extends RuntimeException {
 }

@@ -23,8 +23,8 @@ import java.util.stream.Stream;
 import javax.inject.Inject;
 
 import org.apache.james.jmap.crypto.JwtTokenVerifier;
-import org.apache.james.jmap.exceptions.MailboxCreationException;
-import org.apache.james.jmap.exceptions.NoAuthHeaderException;
+import org.apache.james.jmap.exceptions.MailboxSessionCreationException;
+import org.apache.james.jmap.exceptions.NoValidAuthHeaderException;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
@@ -48,7 +48,7 @@ public class JWTAuthenticationStrategy implements AuthenticationStrategy {
     }
 
     @Override
-    public MailboxSession createMailboxSession(Stream<String> authHeaders) {
+    public MailboxSession createMailboxSession(Stream<String> authHeaders) throws NoValidAuthHeaderException, MailboxSessionCreationException {
 
         Stream<String> userLoginStream = extractTokensFromAuthHeaders(authHeaders)
                 .filter(tokenManager::verify)
@@ -59,13 +59,13 @@ public class JWTAuthenticationStrategy implements AuthenticationStrategy {
                     try {
                         return mailboxManager.createSystemSession(l, LOG);
                     } catch (MailboxException e) {
-                        throw new MailboxCreationException(e);
+                        throw new MailboxSessionCreationException(e);
                     }
                 });
 
         return mailboxSessionStream
                 .findFirst()
-                .orElseThrow(() -> new NoAuthHeaderException());
+                .orElseThrow(() -> new NoValidAuthHeaderException());
     }
 
     @Override
