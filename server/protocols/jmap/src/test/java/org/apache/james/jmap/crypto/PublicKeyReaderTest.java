@@ -16,21 +16,19 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
+
 package org.apache.james.jmap.crypto;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.security.Security;
-import java.security.interfaces.RSAPublicKey;
 import java.util.Optional;
 
-import org.apache.james.jmap.JMAPConfiguration;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class PublicKeyProviderTest {
+public class PublicKeyReaderTest {
 
     private static final String PUBLIC_PEM_KEY = "-----BEGIN PUBLIC KEY-----\n" +
             "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtlChO/nlVP27MpdkG0Bh\n" +
@@ -48,27 +46,17 @@ public class PublicKeyProviderTest {
     }
 
     @Test
-    public void getShouldNotThrowWhenPEMKeyProvided() {
-
-        JMAPConfiguration configWithPEMKey = JMAPConfiguration.builder()
-                .jwtPublicKeyPem(Optional.ofNullable(PUBLIC_PEM_KEY))
-                .keystore(".").secret(".")
-                .build();
-
-        PublicKeyProvider sut = new PublicKeyProvider(configWithPEMKey, new PublicKeyReader());
-
-        assertThat(sut.get()).isInstanceOf(RSAPublicKey.class);
+    public void fromPEMShouldReturnEmptyWhenEmptyProvided() {
+        assertThat(new PublicKeyReader().fromPEM(Optional.empty())).isEmpty();
     }
 
     @Test
-    public void getShouldThrowWhenPEMKeyNotProvided() {
-        JMAPConfiguration configWithPEMKey = JMAPConfiguration.builder()
-                .jwtPublicKeyPem(Optional.ofNullable(""))
-                .keystore(" ").secret(" ")
-                .build();
+    public void fromPEMShouldReturnEmptyWhenInvalidPEMKey() {
+        assertThat(new PublicKeyReader().fromPEM(Optional.of("blabla"))).isEmpty();
+    }
 
-        PublicKeyProvider sut = new PublicKeyProvider(configWithPEMKey, new PublicKeyReader());
-
-        assertThatThrownBy(() -> sut.get()).isExactlyInstanceOf(MissingOrInvalidKeyException.class);
+    @Test
+    public void fromPEMShouldReturnRSAPublicKeyWhenValidPEMKey() {
+        assertThat(new PublicKeyReader().fromPEM(Optional.of(PUBLIC_PEM_KEY))).isPresent();
     }
 }

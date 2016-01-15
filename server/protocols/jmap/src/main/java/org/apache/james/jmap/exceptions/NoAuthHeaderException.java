@@ -16,29 +16,8 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.jmap.crypto;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.james.jmap.JMAPConfiguration;
+package org.apache.james.jmap.exceptions;
 
-import javax.inject.Inject;
-import java.security.PublicKey;
-
-public class PublicKeyProvider {
-
-    private final JMAPConfiguration config;
-    private final PublicKeyReader reader;
-
-    @Inject
-    @VisibleForTesting
-    PublicKeyProvider(JMAPConfiguration config, PublicKeyReader reader) {
-        this.config = config;
-        this.reader = reader;
-    }
-
-    public PublicKey get() {
-        return reader.fromPEM(config.getJwtPublicKeyPem())
-                .orElseThrow(() -> new MissingOrInvalidKeyException());
-    }
-
+public class NoAuthHeaderException extends RuntimeException {
 }

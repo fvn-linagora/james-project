@@ -18,27 +18,27 @@
  ****************************************************************/
 package org.apache.james.jmap.crypto;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.james.jmap.JMAPConfiguration;
+import java.io.IOException;
+import java.io.StringReader;
+import java.security.interfaces.RSAPublicKey;
+import java.util.Optional;
 
-import javax.inject.Inject;
-import java.security.PublicKey;
+import org.bouncycastle.openssl.PEMReader;
 
-public class PublicKeyProvider {
+public class PublicKeyReader {
 
-    private final JMAPConfiguration config;
-    private final PublicKeyReader reader;
+    Optional<RSAPublicKey> fromPEM(Optional<String> pemKey) {
 
-    @Inject
-    @VisibleForTesting
-    PublicKeyProvider(JMAPConfiguration config, PublicKeyReader reader) {
-        this.config = config;
-        this.reader = reader;
+        return pemKey
+                .map(k -> new PEMReader(new StringReader(k)))
+                .flatMap(this::publicKeyFrom);
     }
 
-    public PublicKey get() {
-        return reader.fromPEM(config.getJwtPublicKeyPem())
-                .orElseThrow(() -> new MissingOrInvalidKeyException());
+    private Optional<RSAPublicKey> publicKeyFrom(PEMReader reader) {
+        try {
+            return Optional.ofNullable((RSAPublicKey) reader.readObject());
+        } catch (IOException e) {
+            return Optional.empty();
+        }
     }
-
 }

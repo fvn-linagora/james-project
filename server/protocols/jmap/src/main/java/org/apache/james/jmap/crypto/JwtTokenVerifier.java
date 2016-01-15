@@ -18,11 +18,18 @@
  ****************************************************************/
 package org.apache.james.jmap.crypto;
 
-import com.google.common.annotations.VisibleForTesting;
-import io.jsonwebtoken.*;
-
 import javax.inject.Inject;
-import java.util.Optional;
+
+import com.google.common.annotations.VisibleForTesting;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.SignatureException;
+import io.jsonwebtoken.UnsupportedJwtException;
 
 public class JwtTokenVerifier {
 
@@ -34,25 +41,26 @@ public class JwtTokenVerifier {
         this.pubKeyProvider = pubKeyProvider;
     }
 
-    public boolean verify(String token) {
-        return parseToken(token).isPresent();
+    public boolean verify(String token) throws JwtException {
+        parseToken(token);
+        return true;
     }
 
-    public String extractLogin(String token) {
-        return parseToken(token)
-                .map(Jwt::getBody)
-                .map(Claims::getSubject)
-                .get();
+    public String extractLogin(String token) throws JwtException {
+        Jws<Claims> jws = parseToken(token);
+        return jws
+                .getBody()
+                .getSubject();
     }
 
-    private Optional<Jws<Claims>> parseToken(String token) {
+    private Jws<Claims> parseToken(String token) throws JwtException {
         try {
-            return Optional.ofNullable(Jwts
+            return Jwts
                     .parser()
                     .setSigningKey(pubKeyProvider.get())
-                    .parseClaimsJws(token));
-        } catch(ExpiredJwtException | UnsupportedJwtException | MalformedJwtException | SignatureException e ) {
-            return Optional.empty();
+                    .parseClaimsJws(token);
+        } catch (ExpiredJwtException | UnsupportedJwtException | MalformedJwtException | SignatureException e) {
+            throw e;
         }
     }
 }

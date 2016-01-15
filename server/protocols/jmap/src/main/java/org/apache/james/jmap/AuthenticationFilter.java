@@ -18,10 +18,11 @@
  ****************************************************************/
 package org.apache.james.jmap;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.james.jmap.exceptions.MailboxCreationException;
-import org.apache.james.jmap.exceptions.UnauthorizedException;
-import org.apache.james.mailbox.MailboxSession;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.List;
+import java.util.stream.Stream;
 
 import javax.inject.Inject;
 import javax.servlet.Filter;
@@ -32,14 +33,21 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Stream;
+
+import org.apache.james.jmap.exceptions.MailboxCreationException;
+import org.apache.james.jmap.exceptions.NoAuthHeaderException;
+import org.apache.james.jmap.exceptions.UnauthorizedException;
+import org.apache.james.mailbox.MailboxSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.annotations.VisibleForTesting;
+
+import io.jsonwebtoken.JwtException;
 
 public class AuthenticationFilter implements Filter {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AuthenticationFilter.class);
 
     public static final String MAILBOX_SESSION = "mailboxSession";
     private static final String AUTHORIZATION_HEADERS = "Authorization";
@@ -69,7 +77,8 @@ public class AuthenticationFilter implements Filter {
                     .orElseThrow(UnauthorizedException::new);
             chain.doFilter(requestWithSession, response);
 
-        } catch (UnauthorizedException | MailboxCreationException e) {
+        } catch (UnauthorizedException | NoAuthHeaderException | MailboxCreationException | JwtException e) {
+            LOGGER.error("Exception occurred during authentication process", e);
             httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED);
         }
 
@@ -81,17 +90,12 @@ public class AuthenticationFilter implements Filter {
         return authHeaders != null && authHeaders.hasMoreElements() ? Collections.list(authHeaders).stream() : Stream.of();
     }
 
-    private HttpServletRequest addSessionToRequest(HttpServletRequest httpRequest, Optional<MailboxSession> mailboxSession) {
-        if (mailboxSession.isPresent()) {
-
-            httpRequest.setAttribute(MAILBOX_SESSION, mailboxSession.get());
-        }
+    private HttpServletRequest addSessionToRequest(HttpServletRequest httpRequest, MailboxSession mailboxSession) {
+        httpRequest.setAttribute(MAILBOX_SESSION, mailboxSession);
         return httpRequest;
     }
 
-    private Optional<MailboxSession> createSession(AuthenticationStrategy authenticationMethod,
-                                                   Stream<String> authorizationHeaders) {
-
+    private MailboxSession createSession(AuthenticationStrategy authenticationMethod, Stream<String> authorizationHeaders) {
         return authenticationMethod.createMailboxSession(authorizationHeaders);
     }
 

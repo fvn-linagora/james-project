@@ -18,10 +18,9 @@
  ****************************************************************/
 package org.apache.james.jmap;
 
-import com.google.common.collect.ImmutableList;
-import com.google.inject.AbstractModule;
-import com.google.inject.Provides;
-import com.google.inject.name.Names;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.james.jmap.api.AccessTokenManager;
 import org.apache.james.jmap.api.ContinuationTokenManager;
 import org.apache.james.jmap.api.access.AccessTokenRepository;
@@ -33,9 +32,10 @@ import org.apache.james.jmap.memory.access.MemoryAccessTokenRepository;
 import org.apache.james.jmap.utils.DefaultZonedDateTimeProvider;
 import org.apache.james.jmap.utils.ZonedDateTimeProvider;
 
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
+import com.google.common.collect.ImmutableList;
+import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
+import com.google.inject.name.Names;
 
 public class JMAPCommonModule extends AbstractModule {
     

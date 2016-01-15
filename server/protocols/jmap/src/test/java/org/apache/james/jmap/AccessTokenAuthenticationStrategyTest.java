@@ -20,25 +20,25 @@ package org.apache.james.jmap;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.eq;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import java.util.UUID;
+import java.util.stream.Stream;
 
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.jmap.api.access.exceptions.NotAnAccessTokenException;
 import org.apache.james.jmap.crypto.AccessTokenManagerImpl;
 import org.apache.james.jmap.exceptions.MailboxCreationException;
+import org.apache.james.jmap.exceptions.NoAuthHeaderException;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
-
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Stream;
 
 public class AccessTokenAuthenticationStrategyTest {
 
@@ -55,20 +55,22 @@ public class AccessTokenAuthenticationStrategyTest {
     }
 
     @Test
-    public void createMailboxSessionShouldReturnEmptyWhenNoAuthProvided() {
-        assertThat(testee.createMailboxSession(Stream.empty())).isEmpty();
+    public void createMailboxSessionShouldThrowWhenNoAuthProvided() {
+        assertThatThrownBy(() -> testee.createMailboxSession(Stream.empty()))
+            .isExactlyInstanceOf(NoAuthHeaderException.class);
     }
 
-    @Test(expected=NotAnAccessTokenException.class)
-    public void createMailboxSessionShouldThrowWhenAuthHeaderIsNotAnUUID() throws Exception {
-        testee.createMailboxSession(Stream.of("bad"));
+    @Test
+    public void createMailboxSessionShouldThrowWhenAuthHeaderIsNotAnUUID() {
+        assertThatThrownBy(() -> testee.createMailboxSession(Stream.of("bad")))
+                .isExactlyInstanceOf(NotAnAccessTokenException.class);
     }
 
     @Test
     public void createMailboxSessionShouldThrowWhenMailboxExceptionHasOccurred() throws Exception {
         String username = "username";
         when(mockedMailboxManager.createSystemSession(eq(username), any(Logger.class)))
-                .thenThrow(MailboxException.class);
+                .thenThrow(new MailboxException());
 
         UUID authHeader = UUID.randomUUID();
         when(mockedAccessTokenManager.getUsernameFromToken(AccessToken.fromString(authHeader.toString())))
@@ -90,10 +92,8 @@ public class AccessTokenAuthenticationStrategyTest {
         when(mockedAccessTokenManager.getUsernameFromToken(AccessToken.fromString(authHeader.toString())))
                 .thenReturn(username);
 
-        Optional<MailboxSession> result = testee.createMailboxSession(Stream.of(authHeader.toString()));
-        assertThat(result)
-                .isPresent()
-                .contains(fakeMailboxSession);
+        MailboxSession result = testee.createMailboxSession(Stream.of(authHeader.toString()));
+        assertThat(result).isEqualTo(fakeMailboxSession);
     }
 
     @Test

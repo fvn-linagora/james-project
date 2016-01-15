@@ -19,10 +19,9 @@
 
 package org.apache.james.jmap;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
+import java.io.IOException;
+import java.util.List;
+import java.util.function.Predicate;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -31,66 +30,16 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
-import java.util.List;
-import java.util.function.Predicate;
+
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 
 public class BypassAuthOnRequestMethod implements Filter {
-
-    private final AuthenticationFilter authenticationFilter;
-    private final List<Predicate<HttpServletRequest>> listOfReasonsToBypassAuth;
-
-    BypassAuthOnRequestMethod(AuthenticationFilter authenticationFilter, List<Predicate<HttpServletRequest>> listOfReasonsToBypassAuth) {
-
-        this.authenticationFilter = authenticationFilter;
-        this.listOfReasonsToBypassAuth = listOfReasonsToBypassAuth;
-    }
 
     public static Builder bypass(AuthenticationFilter authenticationFilter) {
         return new Builder(authenticationFilter);
     }
-
-    @Override
-    public void init(FilterConfig filterConfig) throws ServletException {
-    }
-
-    @Override
-    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-        HttpServletRequest httpRequest = (HttpServletRequest)request;
-
-        listOfReasonsToBypassAuth.stream()
-                .filter(r -> r.test(httpRequest))
-                .map(x -> bypassAuth(request, response, chain))
-                .findAny()
-                .orElseGet(() -> continueWith(httpRequest, response, chain));
-    }
-
-    @Override
-    public void destroy() {
-
-    }
-
-    private boolean bypassAuth(ServletRequest request, ServletResponse response, FilterChain chain) {
-        try {
-            chain.doFilter(request, response);
-        } catch (IOException | ServletException e) {
-            throw Throwables.propagate(e);
-        } finally {
-            return false;
-        }
-
-    }
-
-    private boolean continueWith(HttpServletRequest httpRequest, ServletResponse response, FilterChain chain) {
-        try {
-            authenticationFilter.doFilter(httpRequest, response, chain);
-        } catch (IOException | ServletException e) {
-            throw Throwables.propagate(e);
-        } finally {
-            return false;
-        }
-    }
-
 
     public static class Builder {
         private ImmutableList.Builder<Predicate<HttpServletRequest>> reasons = new ImmutableList.Builder<>();
@@ -101,8 +50,10 @@ public class BypassAuthOnRequestMethod implements Filter {
         }
 
         public InitializedBuilder on(String requestMethod) {
-            Preconditions.checkArgument(! Strings.isNullOrEmpty(requestMethod), "'requestMethod' is mandatory");
-            reasons.add(r -> r.getMethod().equalsIgnoreCase(requestMethod.trim()));
+            Preconditions.checkArgument(!Strings.isNullOrEmpty(requestMethod), "'requestMethod' is mandatory");
+            String trimmedRequestMethod = requestMethod.trim();
+            Preconditions.checkArgument(!Strings.isNullOrEmpty(trimmedRequestMethod), "'requestMethod' is mandatory");
+            reasons.add(r -> r.getMethod().equalsIgnoreCase(trimmedRequestMethod));
             return new InitializedBuilder(this);
         }
     }
@@ -110,7 +61,7 @@ public class BypassAuthOnRequestMethod implements Filter {
     public static class InitializedBuilder {
         private final Builder builder;
 
-        public InitializedBuilder(Builder builder) {
+        private InitializedBuilder(Builder builder) {
             this.builder = builder;
         }
 
@@ -122,4 +73,45 @@ public class BypassAuthOnRequestMethod implements Filter {
             return new BypassAuthOnRequestMethod(builder.authenticationFilter, builder.reasons.build());
         }
     }
+
+    private final AuthenticationFilter authenticationFilter;
+    private final List<Predicate<HttpServletRequest>> listOfReasonsToBypassAuth;
+
+    private BypassAuthOnRequestMethod(AuthenticationFilter authenticationFilter, List<Predicate<HttpServletRequest>> listOfReasonsToBypassAuth) {
+        this.authenticationFilter = authenticationFilter;
+        this.listOfReasonsToBypassAuth = listOfReasonsToBypassAuth;
+    }
+
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+    }
+
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+        HttpServletRequest httpRequest = (HttpServletRequest)request;
+
+        if (shouldBypassAuth(httpRequest)) {
+            bypassAuth(request, response, chain);
+        } else {
+            tryAuth(httpRequest, response, chain);
+        }
+    }
+
+    private boolean shouldBypassAuth(HttpServletRequest httpRequest) {
+        return listOfReasonsToBypassAuth.stream()
+                .anyMatch(r -> r.test(httpRequest));
+    }
+
+    @Override
+    public void destroy() {
+    }
+
+    private void bypassAuth(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+        chain.doFilter(request, response);
+    }
+
+    private void tryAuth(HttpServletRequest httpRequest, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+        authenticationFilter.doFilter(httpRequest, response, chain);
+    }
+
 }

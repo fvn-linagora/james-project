@@ -18,20 +18,23 @@
  ****************************************************************/
 package org.apache.james.jmap;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.util.Optional;
+import java.util.stream.Stream;
+
+import javax.inject.Inject;
+
 import org.apache.james.jmap.api.AccessTokenManager;
 import org.apache.james.jmap.api.access.AccessToken;
-import org.apache.james.jmap.exceptions.MailboxCreationException;
 import org.apache.james.jmap.api.access.exceptions.NotAnAccessTokenException;
+import org.apache.james.jmap.exceptions.MailboxCreationException;
+import org.apache.james.jmap.exceptions.NoAuthHeaderException;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
-import java.util.Optional;
-import java.util.stream.Stream;
+import com.google.common.annotations.VisibleForTesting;
 
 public class AccessTokenAuthenticationStrategy implements AuthenticationStrategy {
 
@@ -48,19 +51,21 @@ public class AccessTokenAuthenticationStrategy implements AuthenticationStrategy
     }
 
     @Override
-    public Optional<MailboxSession> createMailboxSession(Stream<String> authHeaders) {
+    public MailboxSession createMailboxSession(Stream<String> authHeaders) {
 
-        return authHeaders
-                .map(AccessToken::fromString)
-                .map(accessTokenManager::getUsernameFromToken)
-                .findFirst()
-                .map(user -> {
-                    try {
-                        return mailboxManager.createSystemSession(user, LOG);
-                    } catch (MailboxException e) {
-                        throw new MailboxCreationException(e);
-                    }
-                });
+        Optional<String> username = authHeaders
+            .map(AccessToken::fromString)
+            .map(accessTokenManager::getUsernameFromToken)
+            .findFirst();
+
+        if (username.isPresent()) {
+            try {
+                return mailboxManager.createSystemSession(username.get(), LOG);
+            } catch (MailboxException e) {
+                throw new MailboxCreationException(e);
+            }
+        }
+        throw new NoAuthHeaderException();
     }
 
     @Override

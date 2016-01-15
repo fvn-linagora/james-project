@@ -20,36 +20,33 @@ package org.apache.james.jmap;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-import com.google.common.collect.ImmutableList;
-import org.apache.james.jmap.api.AccessTokenManager;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
+
+import javax.servlet.FilterChain;
+import javax.servlet.ServletRequest;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.james.jmap.api.access.AccessToken;
 import org.apache.james.jmap.api.access.AccessTokenRepository;
-import org.apache.james.jmap.crypto.AccessTokenManagerImpl;
 import org.apache.james.jmap.memory.access.MemoryAccessTokenRepository;
 import org.apache.james.mailbox.MailboxSession;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
+import com.google.common.collect.ImmutableList;
 
 public class AuthenticationFilterTest {
     private static final String TOKEN = "df991d2a-1c5a-4910-a90f-808b6eda133e";
 
     private HttpServletRequest mockedRequest;
     private HttpServletResponse mockedResponse;
-    private AccessTokenManager accessTokenManager;
     private AccessTokenRepository accessTokenRepository;
     private AuthenticationFilter testee;
     private FilterChain filterChain;
@@ -60,7 +57,6 @@ public class AuthenticationFilterTest {
         mockedResponse = mock(HttpServletResponse.class);
 
         accessTokenRepository = new MemoryAccessTokenRepository(TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS));
-        accessTokenManager = new AccessTokenManagerImpl(accessTokenRepository);
 
         when(mockedRequest.getMethod()).thenReturn("POST");
         List<AuthenticationStrategy> fakeAuthenticationStrategies = ImmutableList.of( new FakeAuthenticationStrategy(false));
@@ -133,8 +129,8 @@ public class AuthenticationFilterTest {
         }
 
         @Override
-        public Optional<MailboxSession> createMailboxSession(Stream<String> requestHeaders) {
-            return Optional.empty();
+        public MailboxSession createMailboxSession(Stream<String> requestHeaders) {
+            return null;
         }
 
         @Override

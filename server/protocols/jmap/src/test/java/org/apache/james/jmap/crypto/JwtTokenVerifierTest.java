@@ -19,6 +19,10 @@
 package org.apache.james.jmap.crypto;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.security.Security;
+import java.util.Optional;
 
 import org.apache.james.jmap.JMAPConfiguration;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -26,8 +30,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.security.Security;
-import java.util.Optional;
+import io.jsonwebtoken.SignatureException;
 
 public class JwtTokenVerifierTest {
 
@@ -55,7 +58,7 @@ public class JwtTokenVerifierTest {
 
     @Before
     public void setup() {
-        PublicKeyProvider pubKeyProvider = new PublicKeyProvider(getJWTConfiguration(), new DEREncodingConverter());
+        PublicKeyProvider pubKeyProvider = new PublicKeyProvider(getJWTConfiguration(), new PublicKeyReader());
         sut = new JwtTokenVerifier(pubKeyProvider);
     }
 
@@ -75,12 +78,13 @@ public class JwtTokenVerifierTest {
     }
 
     @Test
-    public void shouldReturnFalseOnMismatchingSigningKey() {
+    public void shouldThrowOnMismatchingSigningKey() {
         String token = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIn0.Pd6t82" +
                 "tPL3EZdkeYxw_DV2KimE1U2FvuLHmfR_mimJ5US3JFU4J2Gd94O7rwpSTGN1B9h-_lsTebo4ua4xHsTtmczZ9xa8a_kWKaSkqFjNFa" +
                 "Fp6zcoD6ivCu03SlRqsQzSRHXo6TKbnqOt9D6Y2rNa3C4igSwoS0jUE4BgpXbc0";
 
-        assertThat(sut.verify(token)).isFalse();
+        assertThatThrownBy(() -> sut.verify(token))
+            .isInstanceOf(SignatureException.class);
     }
 
     @Test

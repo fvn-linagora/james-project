@@ -25,17 +25,17 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.stream.Stream;
+
 import org.apache.james.jmap.crypto.JwtTokenVerifier;
 import org.apache.james.jmap.exceptions.MailboxCreationException;
+import org.apache.james.jmap.exceptions.NoAuthHeaderException;
 import org.apache.james.mailbox.MailboxManager;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
-
-import java.util.Optional;
-import java.util.stream.Stream;
 
 
 public class JWTAuthenticationStrategyTest {
@@ -55,13 +55,15 @@ public class JWTAuthenticationStrategyTest {
 
 
     @Test
-    public void createMailboxSessionShouldReturnEmptyWhenAuthHeaderIsEmpty() throws Exception {
-        assertThat(testee.createMailboxSession(Stream.empty())).isEmpty();
+    public void createMailboxSessionShouldThrowWhenAuthHeaderIsEmpty() throws Exception {
+        assertThatThrownBy(() -> testee.createMailboxSession(Stream.empty()))
+            .isExactlyInstanceOf(NoAuthHeaderException.class);
     }
 
     @Test
     public void createMailboxSessionShouldReturnEmptyWhenAuthHeaderIsInvalid() throws Exception {
-        assertThat(testee.createMailboxSession(Stream.of("bad"))).isEmpty();
+        assertThatThrownBy(() -> testee.createMailboxSession(Stream.of("bad")))
+            .isExactlyInstanceOf(NoAuthHeaderException.class);
     }
 
     @Test
@@ -73,7 +75,7 @@ public class JWTAuthenticationStrategyTest {
         when(stubTokenManager.verify(fakeAuthHeader)).thenReturn(true);
         when(stubTokenManager.extractLogin(fakeAuthHeader)).thenReturn(username);
         when(mockedMailboxManager.createSystemSession(eq(username), any(Logger.class)))
-                .thenThrow(MailboxException.class);
+                .thenThrow(new MailboxException());
 
         assertThatThrownBy(() -> testee.createMailboxSession(Stream.of(fakeAuthHeaderWithPrefix)))
                 .isExactlyInstanceOf(MailboxCreationException.class);
@@ -91,10 +93,8 @@ public class JWTAuthenticationStrategyTest {
         when(mockedMailboxManager.createSystemSession(eq(username), any(Logger.class)))
                 .thenReturn(fakeMailboxSession);
 
-        Optional<MailboxSession> result = testee.createMailboxSession(Stream.of(fakeAuthHeaderWithPrefix));
-        assertThat(result)
-                .isPresent()
-                .contains(fakeMailboxSession);
+        MailboxSession result = testee.createMailboxSession(Stream.of(fakeAuthHeaderWithPrefix));
+        assertThat(result).isEqualTo(fakeMailboxSession);
     }
 
     @Test
