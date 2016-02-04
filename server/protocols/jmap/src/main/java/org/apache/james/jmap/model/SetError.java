@@ -22,6 +22,7 @@ package org.apache.james.jmap.model;
 import static org.apache.james.jmap.model.MessageProperties.MessageProperty;
 
 import java.util.Optional;
+import java.util.Set;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
@@ -68,6 +69,11 @@ public class SetError {
             } else {
                 this.properties = Optional.of(ImmutableSet.copyOf(properties));
             }
+            return this;
+        }
+        
+        public Builder properties(Set<MessageProperty> properties) {
+            this.properties = Optional.of(ImmutableSet.copyOf(properties));
             return this;
         }
 
