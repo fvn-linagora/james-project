@@ -59,15 +59,10 @@ public class SetError {
         }
 
         public Builder properties(MessageProperty... properties) {
+            ImmutableSet.Builder<MessageProperty> setBuilder = ImmutableSet.<MessageProperty>builder().add(properties);
+            this.properties.ifPresent(setBuilder::addAll);
+            this.properties = Optional.of(setBuilder.build());
 
-            if (this.properties.isPresent()) {
-                this.properties = Optional.of(ImmutableSet.<MessageProperty>builder()
-                        .add(properties)
-                        .addAll(this.properties.get())
-                        .build());
-            } else {
-                this.properties = Optional.of(ImmutableSet.copyOf(properties));
-            }
             return this;
         }
 
