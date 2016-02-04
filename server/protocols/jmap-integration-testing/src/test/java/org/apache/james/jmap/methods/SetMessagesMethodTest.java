@@ -145,7 +145,8 @@ public abstract class SetMessagesMethodTest {
             .body("[0][1].destroyed", hasSize(0))
             .body("[0][1].notDestroyed", hasKey(unknownMailboxMessageId))
             .body("[0][1].notDestroyed[\"" + unknownMailboxMessageId + "\"].type", equalTo("anErrorOccurred"))
-            .body("[0][1].notDestroyed[\"" + unknownMailboxMessageId + "\"].description", equalTo("An error occurred while deleting message " + unknownMailboxMessageId));
+            .body("[0][1].notDestroyed[\"" + unknownMailboxMessageId + "\"].description", equalTo("An error occurred while deleting message " + unknownMailboxMessageId))
+            .body("[0][1].notDestroyed[\"" + unknownMailboxMessageId + "\"].properties", isEmptyOrNullString());
     }
 
     @Test
