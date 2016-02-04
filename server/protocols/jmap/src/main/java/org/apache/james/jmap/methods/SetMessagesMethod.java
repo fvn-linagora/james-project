@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 import javax.inject.Inject;
 import javax.mail.Flags;
 
@@ -49,7 +48,6 @@ import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.github.fge.lambdas.Throwing;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -113,31 +111,20 @@ public class SetMessagesMethod<Id extends MailboxId> implements Method {
     }
 
     private void update(MessageId messageId, UpdateMessagePatch updateMessagePatch, MailboxSession mailboxSession, SetMessagesResponse.Builder builder){
-
-        if(! updateMessagePatch.isValid()) {
-            return;
-        }
-
         try {
 
             MessageMapper<Id> messageMapper = mailboxSessionMapperFactory.createMessageMapper(mailboxSession);
             Mailbox<Id> mailbox = mailboxMapperFactory.getMailboxMapper(mailboxSession).findMailboxByPath(messageId.getMailboxPath(mailboxSession));
             Iterator<MailboxMessage<Id>> mailboxMessage = messageMapper.findInMailbox(mailbox, MessageRange.one(messageId.getUid()), FetchType.Metadata, LIMIT_BY_ONE);
-            Stream<MailboxMessage<Id>> streamOfMessages = StreamSupport.stream(((Iterable<MailboxMessage<Id>>) () -> mailboxMessage).spliterator(), false);
 
-            boolean hasAppliedPatch = streamOfMessages
-                    .filter(msg -> canApplyMessagePatch(messageId, msg, updateMessagePatch, builder))
-                    .map(msg -> applyMessagePatch(messageId, msg, updateMessagePatch, builder))
-                    .map(Throwing.function(msg -> savePatchedMessage(mailbox, messageId, msg, messageMapper)))
-                    .findAny()
-                    .isPresent();
-
-            if (!hasAppliedPatch) {
+            if (! mailboxMessage.hasNext()) {
                 addMessageIdNotFoundToResponse(messageId, builder);
+                return;
             }
+            MailboxMessage<Id> messageWithUpdatedFlags = applyMessagePatch(messageId, mailboxMessage.next(), updateMessagePatch, builder);
+            savePatchedMessage(mailbox, messageId, messageWithUpdatedFlags, messageMapper);
         } catch(MailboxException e) {
             handleMessageUpdateException(messageId, builder, e);
-
         }
     }
 
@@ -159,9 +146,9 @@ public class SetMessagesMethod<Id extends MailboxId> implements Method {
                     ;
     }
 
-    private SetMessagesResponse.Builder addMessageIdNotFoundToResponse(MessageId messageId, SetMessagesResponse.Builder builder) {
-        return builder.notUpdated(ImmutableMap.of(
-                messageId, SetError.builder()
+    private void addMessageIdNotFoundToResponse(MessageId messageId, SetMessagesResponse.Builder builder) {
+        builder.notUpdated(ImmutableMap.of( messageId,
+                SetError.builder()
                         .type("notFound")
                         .properties(MessageProperties.MessageProperty.id)
                         .description("message not found")
@@ -183,10 +170,6 @@ public class SetMessagesMethod<Id extends MailboxId> implements Method {
         builder.updated(ImmutableList.of(messageId));
 
         return message;
-    }
-
-    private boolean canApplyMessagePatch(MessageId messageId, MailboxMessage<Id> message, UpdateMessagePatch updatePatch, SetMessagesResponse.Builder builder) {
-        return updatePatch.isValid();
     }
 
     private void processDestroy(List<MessageId> messageIds, MailboxSession mailboxSession, SetMessagesResponse.Builder responseBuilder) throws MailboxException {
