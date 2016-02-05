@@ -24,15 +24,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import javax.inject.Inject;
 import javax.mail.Flags;
 
-import org.apache.commons.lang.NotImplementedException;
-import org.apache.james.jmap.json.ObjectMapperFactory;
 import org.apache.james.jmap.model.ClientId;
 import org.apache.james.jmap.model.MessageId;
 import org.apache.james.jmap.model.MessageProperties;
@@ -57,9 +55,7 @@ import org.apache.james.util.streams.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonMappingException.Reference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
@@ -77,13 +73,15 @@ public class SetMessagesMethod<Id extends MailboxId> implements Method {
 
     private final MailboxMapperFactory<Id> mailboxMapperFactory;
     private final MailboxSessionMapperFactory<Id> mailboxSessionMapperFactory;
-    private final ObjectMapper jsonParser;
+    private final UpdateMessagePatchProvider updatePatchProvider;
 
     @Inject
-    @VisibleForTesting SetMessagesMethod(MailboxMapperFactory<Id> mailboxMapperFactory, MailboxSessionMapperFactory<Id> mailboxSessionMapperFactory, ObjectMapperFactory objectMapperFactory) {
+    @VisibleForTesting SetMessagesMethod(MailboxMapperFactory<Id> mailboxMapperFactory,
+                                         MailboxSessionMapperFactory<Id> mailboxSessionMapperFactory,
+                                         UpdateMessagePatchProvider updatePatchProvider) {
         this.mailboxMapperFactory = mailboxMapperFactory;
         this.mailboxSessionMapperFactory = mailboxSessionMapperFactory;
-        jsonParser = objectMapperFactory.forParsing();
+        this.updatePatchProvider = updatePatchProvider;
     }
 
     @Override
@@ -120,21 +118,14 @@ public class SetMessagesMethod<Id extends MailboxId> implements Method {
         return responseBuilder.build();
     }
 
-    private void processUpdates(Map<MessageId, ObjectNode> mapOfMessagePatchesById, MailboxSession mailboxSession,
-                                SetMessagesResponse.Builder responseBuilder) {
+    private void processUpdates(Map<MessageId, Function<UpdateMessagePatchProvider, UpdateMessagePatch>> mapOfMessagePatchesById,
+                                MailboxSession mailboxSession, SetMessagesResponse.Builder responseBuilder) {
         mapOfMessagePatchesById.entrySet().stream()
-                .forEach(kv -> parseAndUpdate(mailboxSession, responseBuilder, kv.getKey(), kv.getValue()));
+                .forEach(kv -> parseAndUpdate(mailboxSession, responseBuilder, kv.getKey(), kv.getValue().apply(updatePatchProvider)));
     }
 
-    private void parseAndUpdate(MailboxSession mailboxSession, SetMessagesResponse.Builder responseBuilder, MessageId messageId, ObjectNode json) {
-        try {
-            UpdateMessagePatch updateMessagePatch = jsonParser.readValue(json.toString(), UpdateMessagePatch.class);
-            update(messageId, updateMessagePatch, mailboxSession, responseBuilder);
-        } catch (InvalidFormatException e) {
-            handleInvalidField(messageId, responseBuilder, e);
-        } catch (IOException e) {
-            handleInvalidRequest(messageId, responseBuilder, e);
-        }
+    private void parseAndUpdate(MailboxSession mailboxSession, SetMessagesResponse.Builder responseBuilder, MessageId messageId, UpdateMessagePatch patch) {
+        update(messageId, patch, mailboxSession, responseBuilder);
     }
 
     private void update(MessageId messageId, UpdateMessagePatch updateMessagePatch, MailboxSession mailboxSession, SetMessagesResponse.Builder builder){
@@ -151,94 +142,6 @@ public class SetMessagesMethod<Id extends MailboxId> implements Method {
         }
     }
 
-    public static class UpdateMessagePatchFactory {
-
-        private final UpdateMessagePatchValidator validator;
-
-        public UpdateMessagePatchFactory(UpdateMessagePatchValidator validator) {
-            this.validator = validator;
-        }
-
-        public UpdateMessagePatch create(ObjectNode updatePatchNode) {
-            if (updatePatchNode == null || updatePatchNode.isNull() || updatePatchNode.isMissingNode()) {
-                throw new IllegalArgumentException("updatePatchNode");
-            }
-            if (! validator.isValid(updatePatchNode)) {
-                return UpdateMessagePatch.builder()
-                        .validationResult(validator.validate(updatePatchNode))
-                        .build();
-            }
-            throw new NotImplementedException();
-        }
-    }
-
-
-    public static class UpdateMessagePatchValidator implements Validator<ObjectNode> {
-
-        private final JsonParser parser;
-
-        public UpdateMessagePatchValidator(JsonParser parser) {
-            this.parser = parser;
-        }
-
-        @Override
-        public boolean isValid(ObjectNode patch) {
-            return validate(patch).isEmpty();
-        }
-
-        @Override
-        public Set<ValidationResult> validate(ObjectNode item) {
-            return ImmutableSet.of();
-        }
-    }
-
-    public interface Validator<T> {
-        boolean isValid(T item);
-        Set<ValidationResult> validate(T item);
-    }
-
-    public static class ValidationResult {
-
-        public static Builder builder() {
-            return new Builder();
-        }
-
-        private static class Builder {
-            private String property;
-            private String errorMessage;
-
-            public Builder property(String property) {
-                this.property = property;
-                return this;
-            }
-
-            public Builder message(String message) {
-                this.errorMessage= message;
-                return this;
-            }
-
-            public ValidationResult build() {
-                return new ValidationResult(property, errorMessage);
-            }
-
-        }
-
-        private final String property;
-        private final String errorMessage;
-
-        public String getProperty() {
-            return property;
-        }
-
-        public String getErrorMessage() {
-            return errorMessage;
-        }
-
-        @VisibleForTesting ValidationResult(String property, String errorMessage) {
-            this.property = property;
-            this.errorMessage = errorMessage;
-        }
-    }
 
     private void handleInvalidField(MessageId messageId, SetMessagesResponse.Builder builder, InvalidFormatException e) {
         LOGGER.error("Invalid field in update request", e);

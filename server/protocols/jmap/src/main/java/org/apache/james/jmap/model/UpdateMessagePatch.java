@@ -22,13 +22,11 @@ package org.apache.james.jmap.model;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.mail.Flags;
 
 import org.apache.commons.lang.NotImplementedException;
-import org.apache.james.jmap.methods.SetMessagesMethod;
+import org.apache.james.jmap.methods.ValidationResult;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.google.common.annotations.VisibleForTesting;
@@ -47,7 +45,7 @@ public class UpdateMessagePatch {
         private Optional<Boolean> isFlagged = Optional.empty();
         private Optional<Boolean> isUnread = Optional.empty();
         private Optional<Boolean> isAnswered = Optional.empty();
-        private Set<SetMessagesMethod.ValidationResult> validationResult;
+        private Set<ValidationResult> validationResult;
 
         public Builder mailboxIds(Optional<List<String>> mailboxIds) {
             if (mailboxIds.isPresent()) {
@@ -71,15 +69,15 @@ public class UpdateMessagePatch {
             return this;
         }
 
-        public Builder validationResult(Set<SetMessagesMethod.ValidationResult> validationResult) {
+        public Builder validationResult(Set<ValidationResult> validationResult) {
             this.validationResult = validationResult;
             return this;
         }
 
         public UpdateMessagePatch build() {
 
-            ImmutableList<SetMessagesMethod.ValidationResult> validationResults = validationResult == null
-                    ? ImmutableList.<SetMessagesMethod.ValidationResult>of()
+            ImmutableList<ValidationResult> validationResults = validationResult == null
+                    ? ImmutableList.<ValidationResult>of()
                     : ImmutableList.copyOf(validationResult);
             return new UpdateMessagePatch(mailboxIds.build(), isUnread, isFlagged, isAnswered, validationResults);
         }
@@ -89,14 +87,14 @@ public class UpdateMessagePatch {
     private final Optional<Boolean> isUnread;
     private final Optional<Boolean> isFlagged;
     private final Optional<Boolean> isAnswered;
-    private final ImmutableList<SetMessagesMethod.ValidationResult> validationErrors;
+    private final ImmutableList<ValidationResult> validationErrors;
 
     @VisibleForTesting
     UpdateMessagePatch(List<String> mailboxIds,
                        Optional<Boolean> isUnread,
                        Optional<Boolean> isFlagged,
                        Optional<Boolean> isAnswered,
-                       ImmutableList<SetMessagesMethod.ValidationResult> validationResults) {
+                       ImmutableList<ValidationResult> validationResults) {
 
         this.mailboxIds = mailboxIds;
         this.isUnread = isUnread;
