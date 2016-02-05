@@ -46,7 +46,6 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
@@ -345,13 +344,15 @@ public abstract class SetMessagesMethodTest {
     }
 
     private ResponseSpecification getSetMessagesUpdateOKResponseAssertions(String messageId) {
-        ResponseSpecBuilder builder = new ResponseSpecBuilder();
-        builder.expectStatusCode(200);
-        builder.expectBody("[0][0]", equalTo("messagesSet"));
-        builder.expectBody("[0][1].updated", hasSize(1));
-        builder.expectBody("[0][1].updated", contains(messageId));
-        builder.expectBody("[0][1].error", isEmptyOrNullString());
-        builder.expectBody("[0][1].notUpdated", not(hasKey(messageId)));
+        String responseHeaderPath = "[0][0]";
+        String responseBodyBasePath = "[0][1]";
+        ResponseSpecBuilder builder = new ResponseSpecBuilder()
+                .expectStatusCode(200)
+                .expectBody(responseHeaderPath, equalTo("messagesSet"))
+                .expectBody(responseBodyBasePath +".updated", hasSize(1))
+                .expectBody(responseBodyBasePath +".updated", contains(messageId))
+                .expectBody(responseBodyBasePath +".error", isEmptyOrNullString())
+                .expectBody(responseBodyBasePath +".notUpdated", not(hasKey(messageId)));
         return builder.build();
     }
 
@@ -371,7 +372,6 @@ public abstract class SetMessagesMethodTest {
                 .header("Authorization", accessToken.serialize())
                 .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"isUnread\" : false } } }, \"#0\"]]", presumedMessageId))
         // When
-        .when()
                 .post("/jmap");
         // Then
         given()
@@ -399,12 +399,12 @@ public abstract class SetMessagesMethodTest {
         embeddedElasticSearch.awaitForElasticSearch();
 
         String presumedMessageId = username + "|mailbox|1";
-        // When
         given()
                 .accept(ContentType.JSON)
                 .contentType(ContentType.JSON)
                 .header("Authorization", accessToken.serialize())
                 .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"isUnread\" : true } } }, \"#0\"]]", presumedMessageId))
+        // When
         .when()
                 .post("/jmap")
         // Then
@@ -429,7 +429,6 @@ public abstract class SetMessagesMethodTest {
                 .header("Authorization", accessToken.serialize())
                 .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"isUnread\" : true } } }, \"#0\"]]", presumedMessageId))
         // When
-        .when()
                 .post("/jmap");
         // Then
         given()
@@ -457,12 +456,12 @@ public abstract class SetMessagesMethodTest {
         embeddedElasticSearch.awaitForElasticSearch();
 
         String presumedMessageId = username + "|mailbox|1";
-        // When
         given()
                 .accept(ContentType.JSON)
                 .contentType(ContentType.JSON)
                 .header("Authorization", accessToken.serialize())
                 .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"isFlagged\" : true } } }, \"#0\"]]", presumedMessageId))
+        // When
         .when()
                 .post("/jmap")
         // Then
@@ -487,7 +486,6 @@ public abstract class SetMessagesMethodTest {
                 .header("Authorization", accessToken.serialize())
                 .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"isFlagged\" : true } } }, \"#0\"]]", presumedMessageId))
         // When
-        .when()
                 .post("/jmap");
         // Then
         given()
@@ -572,7 +570,6 @@ public abstract class SetMessagesMethodTest {
                 .header("Authorization", accessToken.serialize())
                 .body(String.format("[[\"setMessages\", {\"update\": {\"%s\" : { \"isAnswered\" : true } } }, \"#0\"]]", presumedMessageId))
         // When
-        .when()
                 .post("/jmap");
         // Then
         given()

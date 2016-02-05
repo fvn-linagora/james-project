@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -135,17 +136,13 @@ public class SetMessagesMethod<Id extends MailboxId> implements Method {
 
     private void update(MessageId messageId, UpdateMessagePatch updateMessagePatch, MailboxSession mailboxSession, SetMessagesResponse.Builder builder){
         try {
-
             MessageMapper<Id> messageMapper = mailboxSessionMapperFactory.createMessageMapper(mailboxSession);
             Mailbox<Id> mailbox = mailboxMapperFactory.getMailboxMapper(mailboxSession).findMailboxByPath(messageId.getMailboxPath(mailboxSession));
             Iterator<MailboxMessage<Id>> mailboxMessage = messageMapper.findInMailbox(mailbox, MessageRange.one(messageId.getUid()), FetchType.Metadata, LIMIT_BY_ONE);
-
-            if (! mailboxMessage.hasNext()) {
-                addMessageIdNotFoundToResponse(messageId, builder);
-                return;
-            }
             MailboxMessage<Id> messageWithUpdatedFlags = applyMessagePatch(messageId, mailboxMessage.next(), updateMessagePatch, builder);
             savePatchedMessage(mailbox, messageId, messageWithUpdatedFlags, messageMapper);
+        } catch(NoSuchElementException e) {
+            addMessageIdNotFoundToResponse(messageId, builder);
         } catch(MailboxException e) {
             handleMessageUpdateException(messageId, builder, e);
         }
@@ -203,19 +200,9 @@ public class SetMessagesMethod<Id extends MailboxId> implements Method {
     }
 
     private MailboxMessage<Id> applyMessagePatch(MessageId messageId, MailboxMessage<Id> message, UpdateMessagePatch updatePatch, SetMessagesResponse.Builder builder) {
-        Flags messageFlags = new Flags();
-        if (!message.isSeen() && updatePatch.isUnread().isPresent() && !updatePatch.isUnread().get()) {
-            messageFlags.add(Flags.Flag.SEEN);
-        }
-        if (!message.isAnswered() && updatePatch.isAnswered().isPresent() && updatePatch.isAnswered().get()) {
-            messageFlags.add(Flags.Flag.ANSWERED);
-        }
-        if (!message.isFlagged() && updatePatch.isFlagged().isPresent() && updatePatch.isFlagged().get()) {
-            messageFlags.add(Flags.Flag.FLAGGED);
-        }
-        message.setFlags(messageFlags);
+        Flags newStateFlags = updatePatch.applyToState(message.isSeen(), message.isAnswered(), message.isFlagged());
+        message.setFlags(newStateFlags);
         builder.updated(ImmutableList.of(messageId));
-
         return message;
     }
 

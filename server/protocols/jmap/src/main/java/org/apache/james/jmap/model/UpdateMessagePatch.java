@@ -22,6 +22,8 @@ package org.apache.james.jmap.model;
 import java.util.List;
 import java.util.Optional;
 
+import javax.mail.Flags;
+
 import org.apache.commons.lang.NotImplementedException;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
@@ -30,6 +32,10 @@ import com.google.common.collect.ImmutableList;
 
 @JsonDeserialize(builder = UpdateMessagePatch.Builder.class)
 public class UpdateMessagePatch {
+
+    public static Builder builder() {
+        return new Builder();
+    }
 
     @JsonPOJOBuilder(withPrefix = "")
     public static class Builder {
@@ -71,10 +77,6 @@ public class UpdateMessagePatch {
     private final Optional<Boolean> isFlagged;
     private final Optional<Boolean> isAnswered;
 
-    public static Builder builder() {
-        return new Builder();
-    }
-
     @VisibleForTesting
     UpdateMessagePatch(List<String> mailboxIds,
                        Optional<Boolean> isUnread,
@@ -105,5 +107,19 @@ public class UpdateMessagePatch {
 
     public boolean isValid() {
         return true; // to be implemented when UpdateMessagePatch would allow any message property to be set
+    }
+
+    public Flags applyToState(boolean isSeen, boolean isAnswered, boolean isFlagged) {
+        Flags newStateFlags = new Flags();
+        if (!isSeen && isUnread().isPresent() && !isUnread().get()) {
+            newStateFlags.add(Flags.Flag.SEEN);
+        }
+        if (!isAnswered && isAnswered().isPresent() && isAnswered().get()) {
+            newStateFlags.add(Flags.Flag.ANSWERED);
+        }
+        if (!isFlagged && isFlagged().isPresent() && isFlagged().get()) {
+            newStateFlags.add(Flags.Flag.FLAGGED);
+        }
+        return newStateFlags;
     }
 }
