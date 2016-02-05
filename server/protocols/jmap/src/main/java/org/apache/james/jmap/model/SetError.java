@@ -33,6 +33,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 @JsonDeserialize(builder = SetError.Builder.class)
 public class SetError {
@@ -62,13 +63,10 @@ public class SetError {
         }
 
         public Builder properties(Set<MessageProperty> properties) {
-            if( properties == null ) {
-                return this;
-            }
-            this.properties = Optional.of( this.properties
-                    .map(p -> Stream.concat( properties.stream(), p.stream()))
-                    .orElse(properties.stream())
-                    .collect(Collectors.toImmutableSet()));
+            this.properties = Optional.of(Sets.union(
+                    this.properties.orElse(ImmutableSet.of()),
+                    Optional.ofNullable(properties).orElse(ImmutableSet.of()))
+                    .immutableCopy());
             return this;
         }
 

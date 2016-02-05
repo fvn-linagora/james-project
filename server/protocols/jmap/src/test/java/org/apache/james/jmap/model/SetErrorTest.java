@@ -88,6 +88,20 @@ public class SetErrorTest {
                 .type("a type").description("a description").properties(null)
                 .build();
 
-        assertThat(result.getProperties()).isEmpty();
+        assertThat(result.getProperties()).isPresent();
+        assertThat(result.getProperties().get()).isEmpty();
+    }
+
+    @Test
+    public void buildShouldBeIdempotentWhenNullPropertiesSet() {
+        ImmutableSet<MessageProperty> nonNullProperty = ImmutableSet.of(MessageProperty.from);
+        SetError result = SetError.builder()
+                .type("a type").description("a description")
+                .properties(nonNullProperty)
+                .properties(null)
+                .build();
+
+        assertThat(result.getProperties()).isPresent();
+        assertThat(result.getProperties().get()).isEqualTo(nonNullProperty);
     }
 }
