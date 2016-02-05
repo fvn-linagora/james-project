@@ -26,8 +26,11 @@ import java.time.ZonedDateTime;
 import java.util.Optional;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.james.jmap.json.ObjectMapperFactory;
 import org.junit.Test;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -76,5 +79,19 @@ public class SetMessagesRequestTest {
             .build();
 
         assertThat(setMessagesRequest).isEqualToComparingFieldByField(expected);
+    }
+
+    @Test
+    public void builderShouldValidateUpdatePatch() {
+
+        ObjectMapperFactory factory = new ObjectMapperFactory();
+        ObjectMapper jsonWriter = factory.forWriting();
+
+        ImmutableMap<MessageId, ObjectNode> updatePatchsMap = ImmutableMap.of(MessageId.of("messageId"), jsonWriter.createObjectNode());
+        SetMessagesRequest setMessagesRequest = SetMessagesRequest.builder()
+                .accountId(null)
+                .ifInState(null)
+                .update(updatePatchsMap)
+                .build();
     }
 }
