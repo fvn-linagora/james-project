@@ -22,7 +22,6 @@ package org.apache.james.jmap.methods;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
-
 import javax.inject.Inject;
 
 import org.apache.james.jmap.model.MessageProperties;
@@ -62,7 +61,6 @@ public class UpdateMessagePatchValidator implements Validator<ObjectNode> {
             e.getPath().stream().forEach(ref ->
                     compilation.add(ValidationResult.builder()
                         .property(firstFieldFrom(e.getPath()))
-                        // .property(ref.getFieldName())
                         .message(e.getMessage())
                         .build()));
         } catch (IOException e) {

@@ -22,13 +22,10 @@ package org.apache.james.jmap.model;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.jmap.methods.JmapRequest;
-import org.apache.james.jmap.methods.UpdateMessagePatchProvider;
+import org.apache.james.jmap.methods.UpdateMessagePatchConverter;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
@@ -36,6 +33,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.commons.lang.NotImplementedException;
 
 @JsonDeserialize(builder = SetMessagesRequest.Builder.class)
 public class SetMessagesRequest implements JmapRequest {
@@ -50,7 +48,7 @@ public class SetMessagesRequest implements JmapRequest {
         private String accountId;
         private String ifInState;
         private ImmutableList.Builder<Message> create;
-        private ImmutableMap.Builder<MessageId, Function<UpdateMessagePatchProvider, UpdateMessagePatch>> updatesProvider;
+        private ImmutableMap.Builder<MessageId, Function<UpdateMessagePatchConverter, UpdateMessagePatch>> updatesProvider;
 
         private ImmutableList.Builder<MessageId> destroy;
 
@@ -83,7 +81,7 @@ public class SetMessagesRequest implements JmapRequest {
 
         public Builder update(Map<MessageId, ObjectNode> updates) {
             updates.entrySet().stream().forEach(pair -> updatesProvider.put(pair.getKey(),
-                provider -> provider.get(pair.getValue())));
+                converter -> converter.fromJsonNode(pair.getValue())));
             return this;
         }
 
@@ -100,10 +98,10 @@ public class SetMessagesRequest implements JmapRequest {
     private final Optional<String> accountId;
     private final Optional<String> ifInState;
     private final List<Message> create;
-    private final Map<MessageId, Function<UpdateMessagePatchProvider, UpdateMessagePatch>> update;
+    private final Map<MessageId, Function<UpdateMessagePatchConverter, UpdateMessagePatch>> update;
     private final List<MessageId> destroy;
 
-    @VisibleForTesting SetMessagesRequest(Optional<String> accountId, Optional<String> ifInState, List<Message> create, Map<MessageId, Function<UpdateMessagePatchProvider, UpdateMessagePatch>>  update, List<MessageId> destroy) {
+    @VisibleForTesting SetMessagesRequest(Optional<String> accountId, Optional<String> ifInState, List<Message> create, Map<MessageId, Function<UpdateMessagePatchConverter, UpdateMessagePatch>>  update, List<MessageId> destroy) {
         this.accountId = accountId;
         this.ifInState = ifInState;
         this.create = create;
@@ -123,7 +121,7 @@ public class SetMessagesRequest implements JmapRequest {
         return create;
     }
 
-    public Map<MessageId, Function<UpdateMessagePatchProvider, UpdateMessagePatch>> getUpdate() {
+    public Map<MessageId, Function<UpdateMessagePatchConverter, UpdateMessagePatch>> getUpdate() {
         return update;
     }
 

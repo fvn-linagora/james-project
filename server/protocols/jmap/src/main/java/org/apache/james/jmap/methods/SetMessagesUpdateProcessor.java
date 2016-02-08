@@ -27,7 +27,6 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.mail.Flags;
 
@@ -61,13 +60,13 @@ public class SetMessagesUpdateProcessor<Id extends MailboxId> {
     private static final int LIMIT_BY_ONE = 1;
     private static final Logger LOGGER = LoggerFactory.getLogger(SetMessagesUpdateProcessor.class);
 
-    private final UpdateMessagePatchProvider updatePatchProvider;
+    private final UpdateMessagePatchConverter updatePatchConverter;
     private final MailboxMapperFactory<Id> mailboxMapperFactory;
     private final MailboxSessionMapperFactory<Id> mailboxSessionMapperFactory;
 
     @Inject
-    @VisibleForTesting SetMessagesUpdateProcessor(UpdateMessagePatchProvider updatePatchProvider, MailboxMapperFactory<Id> mailboxMapperFactory, MailboxSessionMapperFactory<Id> mailboxSessionMapperFactory) {
-        this.updatePatchProvider = updatePatchProvider;
+    @VisibleForTesting SetMessagesUpdateProcessor(UpdateMessagePatchConverter updatePatchConverter, MailboxMapperFactory<Id> mailboxMapperFactory, MailboxSessionMapperFactory<Id> mailboxSessionMapperFactory) {
+        this.updatePatchConverter = updatePatchConverter;
         this.mailboxMapperFactory = mailboxMapperFactory;
         this.mailboxSessionMapperFactory = mailboxSessionMapperFactory;
     }
@@ -75,7 +74,7 @@ public class SetMessagesUpdateProcessor<Id extends MailboxId> {
     public void processUpdates(SetMessagesRequest request,  MailboxSession mailboxSession, SetMessagesResponse.Builder responseBuilder) {
         List<Map.Entry<MessageId, UpdateMessagePatch>> messagesWithPatches = request.getUpdate()
                 .entrySet().stream()
-                .map(mwp -> convertToUpdatePatch(mwp))
+                .map(mwp -> getUpdates(mwp))
                 .collect(Collectors.toList());
 
         messagesWithPatches.stream()
@@ -87,10 +86,10 @@ public class SetMessagesUpdateProcessor<Id extends MailboxId> {
                 .forEach(e -> update(e.getKey(), e.getValue(), mailboxSession, responseBuilder));
     }
 
-    private Map.Entry<MessageId, UpdateMessagePatch> convertToUpdatePatch(Map.Entry<MessageId, Function<UpdateMessagePatchProvider, UpdateMessagePatch>> e) {
+    private Map.Entry<MessageId, UpdateMessagePatch> getUpdates(Map.Entry<MessageId, Function<UpdateMessagePatchConverter, UpdateMessagePatch>> e) {
         MessageId messageId = e.getKey();
-        Function<UpdateMessagePatchProvider, UpdateMessagePatch> jsonToPatchConverter = e.getValue();
-        UpdateMessagePatch updatePatch = jsonToPatchConverter.apply(updatePatchProvider);
+        Function<UpdateMessagePatchConverter, UpdateMessagePatch> updatePatchProvider = e.getValue();
+        UpdateMessagePatch updatePatch = updatePatchProvider.apply(updatePatchConverter);
         return new SimpleImmutableEntry<>(messageId, updatePatch);
     }
 

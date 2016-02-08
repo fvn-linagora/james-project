@@ -22,26 +22,25 @@ package org.apache.james.jmap.methods;
 import java.io.IOException;
 import javax.inject.Inject;
 
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.jmap.model.UpdateMessagePatch;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 
-public class UpdateMessagePatchProvider {
+public class UpdateMessagePatchConverter {
 
     private final ObjectMapper jsonParser;
     private final UpdateMessagePatchValidator validator;
 
     @Inject
-    @VisibleForTesting UpdateMessagePatchProvider(ObjectMapper jsonParser, UpdateMessagePatchValidator validator) {
+    @VisibleForTesting
+    UpdateMessagePatchConverter(ObjectMapper jsonParser, UpdateMessagePatchValidator validator) {
         this.jsonParser = jsonParser;
         this.validator = validator;
     }
 
-    public UpdateMessagePatch get(ObjectNode updatePatchNode) {
+    public UpdateMessagePatch fromJsonNode(ObjectNode updatePatchNode) {
         if (updatePatchNode == null || updatePatchNode.isNull() || updatePatchNode.isMissingNode()) {
             throw new IllegalArgumentException("updatePatchNode");
         }
