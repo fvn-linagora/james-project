@@ -19,17 +19,24 @@
 
 package org.apache.james.jmap.methods;
 
+import java.io.IOException;
+import javax.inject.Inject;
+
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.jmap.model.UpdateMessagePatch;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Throwables;
 
 public class UpdateMessagePatchProvider {
 
     private final ObjectMapper jsonParser;
     private final UpdateMessagePatchValidator validator;
 
-    public UpdateMessagePatchProvider(ObjectMapper jsonParser, UpdateMessagePatchValidator validator) {
+    @Inject
+    @VisibleForTesting UpdateMessagePatchProvider(ObjectMapper jsonParser, UpdateMessagePatchValidator validator) {
         this.jsonParser = jsonParser;
         this.validator = validator;
     }
@@ -43,6 +50,13 @@ public class UpdateMessagePatchProvider {
                     .validationResult(validator.validate(updatePatchNode))
                     .build();
         }
-        throw new NotImplementedException();
+        UpdateMessagePatch result = null;
+        try {
+            result = jsonParser.readerFor(UpdateMessagePatch.class).<UpdateMessagePatch>readValue(updatePatchNode);
+            return result;
+        } catch (IOException e) {
+            Throwables.propagate(e);
+        }
+        return result;
     }
 }

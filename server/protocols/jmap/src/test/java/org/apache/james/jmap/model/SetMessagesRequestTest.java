@@ -80,18 +80,4 @@ public class SetMessagesRequestTest {
 
         assertThat(setMessagesRequest).isEqualToComparingFieldByField(expected);
     }
-
-    @Test
-    public void builderShouldValidateUpdatePatch() {
-
-        ObjectMapperFactory factory = new ObjectMapperFactory();
-        ObjectMapper jsonWriter = factory.forWriting();
-
-        ImmutableMap<MessageId, ObjectNode> updatePatchsMap = ImmutableMap.of(MessageId.of("messageId"), jsonWriter.createObjectNode());
-        SetMessagesRequest setMessagesRequest = SetMessagesRequest.builder()
-                .accountId(null)
-                .ifInState(null)
-                .update(updatePatchsMap)
-                .build();
-    }
 }

@@ -23,19 +23,23 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
+import javax.inject.Inject;
+
 import org.apache.james.jmap.model.MessageProperties;
 import org.apache.james.jmap.model.UpdateMessagePatch;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 
 public class UpdateMessagePatchValidator implements Validator<ObjectNode> {
 
     private final ObjectMapper parser;
 
-    public UpdateMessagePatchValidator(ObjectMapper parser) {
+    @Inject
+    @VisibleForTesting UpdateMessagePatchValidator(ObjectMapper parser) {
         this.parser = parser;
     }
 
@@ -47,7 +51,6 @@ public class UpdateMessagePatchValidator implements Validator<ObjectNode> {
     @Override
     public Set<ValidationResult> validate(ObjectNode json) {
         ImmutableSet.Builder<ValidationResult> compilation = ImmutableSet.builder();
-
         try {
             parser.readValue(json.toString(), UpdateMessagePatch.class);
         } catch (InvalidFormatException e) {
@@ -55,12 +58,18 @@ public class UpdateMessagePatchValidator implements Validator<ObjectNode> {
                     .property(firstFieldFrom(e.getPath()))
                     .message(e.getMessage())
                     .build());
+        } catch (JsonMappingException e) {
+            e.getPath().stream().forEach(ref ->
+                    compilation.add(ValidationResult.builder()
+                        .property(firstFieldFrom(e.getPath()))
+                        // .property(ref.getFieldName())
+                        .message(e.getMessage())
+                        .build()));
         } catch (IOException e) {
             compilation.add(ValidationResult.builder()
                     .message(e.getMessage())
                     .build());
         }
-
         return compilation.build();
     }
 

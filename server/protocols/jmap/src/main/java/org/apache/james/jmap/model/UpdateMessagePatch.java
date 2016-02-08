@@ -54,18 +54,18 @@ public class UpdateMessagePatch {
             return this;
         }
 
-        public Builder isFlagged(Optional<Boolean> isFlagged) {
-            this.isFlagged = isFlagged;
+        public Builder isFlagged(Boolean isFlagged) {
+            this.isFlagged = Optional.of(isFlagged);
             return this;
         }
 
-        public Builder isUnread(Optional<Boolean> isUnread) {
-            this.isUnread = isUnread;
+        public Builder isUnread(Boolean isUnread) {
+            this.isUnread = Optional.of(isUnread);
             return this;
         }
 
-        public Builder isAnswered(Optional<Boolean> isAnswered) {
-            this.isAnswered = isAnswered;
+        public Builder isAnswered(Boolean isAnswered) {
+            this.isAnswered = Optional.of(isAnswered);
             return this;
         }
 
@@ -87,6 +87,7 @@ public class UpdateMessagePatch {
     private final Optional<Boolean> isUnread;
     private final Optional<Boolean> isFlagged;
     private final Optional<Boolean> isAnswered;
+
     private final ImmutableList<ValidationResult> validationErrors;
 
     @VisibleForTesting
@@ -119,8 +120,12 @@ public class UpdateMessagePatch {
         return isAnswered;
     }
 
+    public ImmutableList<ValidationResult> getValidationErrors() {
+        return validationErrors;
+    }
+
     public boolean isValid() {
-        return true; // to be implemented when UpdateMessagePatch would allow any message property to be set
+        return getValidationErrors().isEmpty();
     }
 
     public Flags applyToState(boolean isSeen, boolean isAnswered, boolean isFlagged) {

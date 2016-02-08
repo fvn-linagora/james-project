@@ -527,7 +527,8 @@ public abstract class SetMessagesMethodTest {
                 .body("[0][1].notUpdated", hasKey(messageId))
                 .body("[0][1].notUpdated[\""+messageId+"\"].type", equalTo("invalidProperties"))
                 .body("[0][1].notUpdated[\""+messageId+"\"].properties[0]", equalTo("isUnread"))
-                .body("[0][1].notUpdated[\""+messageId+"\"].description", startsWith("Can not construct instance of java.lang.Boolean from String value '123': only \"true\" or \"false\" recognized"))
+                .body("[0][1].notUpdated[\""+messageId+"\"].description", startsWith("isUnread: Can not construct instance of java.lang.Boolean from String value '123': only \"true\" or \"false\" recognized\n" +
+                        " at [Source: {\"isUnread\":\"123\"}; line: 1, column: 2] (through reference chain: org.apache.james.jmap.model.Builder[\"isUnread\"])"))
                 .body("[0][1].updated", hasSize(0));
     }
 
