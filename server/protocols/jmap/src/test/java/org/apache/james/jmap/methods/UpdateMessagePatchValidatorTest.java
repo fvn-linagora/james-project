@@ -45,7 +45,7 @@ public class UpdateMessagePatchValidatorTest {
 
         UpdateMessagePatchValidator sut = new UpdateMessagePatchValidator(mapper);
         Set<ValidationResult> result = sut.validate(rootNode);
-        assertThat(result).extracting("property", String.class).contains("isUnread");
+        assertThat(result).extracting(ValidationResult::getProperty).contains("isUnread");
     }
 
     @Test
@@ -71,6 +71,6 @@ public class UpdateMessagePatchValidatorTest {
         Set<ValidationResult> result = sut.validate(emptyRootNode);
         // Then
         assertThat(result).isNotEmpty();
-        assertThat(result).extracting("property", String.class).contains(ValidationResult.UNDEFINED_PROPERTY);
+        assertThat(result).extracting(ValidationResult::getProperty).contains(ValidationResult.UNDEFINED_PROPERTY);
     }
 }

@@ -52,9 +52,7 @@ public class UpdateMessagePatchTest {
         UpdateMessagePatch testee = UpdateMessagePatch.builder().build();
         boolean isFlaggedSet = true;
         List<Flags.Flag> updatedFlags = Arrays.asList(testee.applyToState(false, false, isFlaggedSet).getSystemFlags());
-        assertThat(updatedFlags).contains(Flags.Flag.FLAGGED);
-        assertThat(updatedFlags).doesNotContain(Flags.Flag.SEEN);
-        assertThat(updatedFlags).doesNotContain(Flags.Flag.ANSWERED);
+        assertThat(updatedFlags).containsExactly(Flags.Flag.FLAGGED);
     }
 
 
@@ -71,7 +69,7 @@ public class UpdateMessagePatchTest {
         UpdateMessagePatch testee = UpdateMessagePatch.builder().build();
         boolean isFlagged = true;
         List<Flags.Flag> updatedFlags = Arrays.asList(testee.applyToState(false, false, isFlagged).getSystemFlags());
-        assertThat(updatedFlags).contains(Flags.Flag.FLAGGED);
+        assertThat(updatedFlags).containsExactly(Flags.Flag.FLAGGED);
     }
 
     @Test
@@ -79,7 +77,7 @@ public class UpdateMessagePatchTest {
         UpdateMessagePatch testee = UpdateMessagePatch.builder().isUnread(false).build();
         boolean isSeen = true;
         List<Flags.Flag> updatedFlags = Arrays.asList(testee.applyToState(isSeen, false, false).getSystemFlags());
-        assertThat(updatedFlags).containsOnly(Flags.Flag.SEEN);
+        assertThat(updatedFlags).containsExactly(Flags.Flag.SEEN);
     }
 
 }

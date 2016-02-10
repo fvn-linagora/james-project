@@ -25,6 +25,7 @@ import java.util.Set;
 
 import javax.mail.Flags;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.james.jmap.methods.ValidationResult;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -45,7 +46,7 @@ public class UpdateMessagePatch {
         private Optional<Boolean> isFlagged = Optional.empty();
         private Optional<Boolean> isUnread = Optional.empty();
         private Optional<Boolean> isAnswered = Optional.empty();
-        private Set<ValidationResult> validationResult;
+        private Set<ValidationResult> validationResult = ImmutableSet.of();
 
         public Builder mailboxIds(Optional<List<String>> mailboxIds) {
             if (mailboxIds.isPresent()) {
@@ -70,16 +71,12 @@ public class UpdateMessagePatch {
         }
 
         public Builder validationResult(Set<ValidationResult> validationResult) {
-            this.validationResult = validationResult;
+            this.validationResult = ImmutableSet.copyOf(validationResult);
             return this;
         }
 
         public UpdateMessagePatch build() {
-
-            ImmutableList<ValidationResult> validationResults = validationResult == null
-                    ? ImmutableList.<ValidationResult>of()
-                    : ImmutableList.copyOf(validationResult);
-            return new UpdateMessagePatch(mailboxIds.build(), isUnread, isFlagged, isAnswered, validationResults);
+            return new UpdateMessagePatch(mailboxIds.build(), isUnread, isFlagged, isAnswered, ImmutableList.copyOf(validationResult));
         }
     }
 
@@ -131,15 +128,19 @@ public class UpdateMessagePatch {
     public Flags applyToState(boolean isSeen, boolean isAnswered, boolean isFlagged) {
         Flags newStateFlags = new Flags();
 
-        if (isFlagged().isPresent() && isFlagged().get() || (! isFlagged().isPresent() && isFlagged)) {
+        boolean shouldMessageBeFlagged = isFlagged().isPresent() && isFlagged().get() || (!isFlagged().isPresent() && isFlagged);
+        if (shouldMessageBeFlagged) {
             newStateFlags.add(Flags.Flag.FLAGGED);
         }
-        if (isAnswered().isPresent() && isAnswered().get() || (! isAnswered().isPresent() && isAnswered)) {
+        boolean shouldMessageBeMarkAnswered = isAnswered().isPresent() && isAnswered().get() || (!isAnswered().isPresent() && isAnswered);
+        if (shouldMessageBeMarkAnswered) {
             newStateFlags.add(Flags.Flag.ANSWERED);
         }
-        if (isUnread().isPresent() && !isUnread().get() || (!isUnread().isPresent() && isSeen)) {
+        boolean shouldMessageBeMarkSeen = isUnread().isPresent() && !isUnread().get() || (!isUnread().isPresent() && isSeen);
+        if (shouldMessageBeMarkSeen) {
             newStateFlags.add(Flags.Flag.SEEN);
         }
         return newStateFlags;
     }
+
 }

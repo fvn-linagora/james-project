@@ -142,7 +142,7 @@ public class SetMessagesUpdateProcessor<Id extends MailboxId> {
     }
 
     private void handleInvalidRequest(SetMessagesResponse.Builder responseBuilder, MessageId messageId,
-                                      ImmutableList<ValidationResult> validationErrors) {
+                                      List<ValidationResult> validationErrors) {
         LOGGER.error("Invalid update request for message #", messageId.toString());
 
         String formattedValidationErrorMessage = validationErrors.stream()

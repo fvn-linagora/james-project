@@ -95,14 +95,8 @@ public class SetMessagesMethod<Id extends MailboxId> implements Method {
     private SetMessagesResponse setMessagesResponse(SetMessagesRequest request, MailboxSession mailboxSession) throws MailboxException {
         SetMessagesResponse.Builder responseBuilder = SetMessagesResponse.builder();
         processDestroy(request.getDestroy(), mailboxSession, responseBuilder);
-        processUpdatesAndMergeResponse(request, mailboxSession, responseBuilder);
+        messageUpdater.processUpdates(request, mailboxSession).mergeInto(responseBuilder);
         return responseBuilder.build();
-    }
-
-    private void processUpdatesAndMergeResponse(SetMessagesRequest request, MailboxSession mailboxSession, SetMessagesResponse.Builder responseBuilder) {
-        SetMessagesResponse updatesResponse = messageUpdater.processUpdates(request, mailboxSession);
-        responseBuilder.updated(updatesResponse.getUpdated());
-        responseBuilder.notUpdated(updatesResponse.getNotUpdated());
     }
 
     private void processDestroy(List<MessageId> messageIds, MailboxSession mailboxSession, SetMessagesResponse.Builder responseBuilder) throws MailboxException {
