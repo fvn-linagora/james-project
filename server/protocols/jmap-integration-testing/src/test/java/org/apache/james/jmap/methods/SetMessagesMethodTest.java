@@ -36,6 +36,8 @@ import static org.hamcrest.collection.IsMapWithSize.anEmptyMap;
 
 import java.io.ByteArrayInputStream;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import javax.mail.Flags;
 
 import org.apache.james.backends.cassandra.EmbeddedCassandra;
@@ -47,15 +49,15 @@ import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
 
-import org.junit.Ignore;
-
 import com.google.common.base.Charsets;
 import com.jayway.restassured.RestAssured;
 import com.jayway.restassured.builder.ResponseSpecBuilder;
 import com.jayway.restassured.http.ContentType;
 import com.jayway.restassured.specification.ResponseSpecification;
 import org.hamcrest.Matchers;
+
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
@@ -623,5 +625,71 @@ public abstract class SetMessagesMethodTest {
             .body(ARGUMENTS + ".notUpdated[\""+nonExistingMessageId+"\"].type", equalTo("notFound"))
             .body(ARGUMENTS + ".notUpdated[\""+nonExistingMessageId+"\"].description", equalTo("message not found"))
             .body(ARGUMENTS + ".updated", hasSize(0));
+    }
+
+    @Test
+    public void setMessageShouldSaveToOutboxWhenSendingMessage() {
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "outbox");
+        embeddedElasticSearch.awaitForElasticSearch();
+
+        // Find the newly created outbox mailbox (using getMailboxes command on /jmap endpoint)
+        List<Map<String, String>> mailboxes = with()
+                .accept(ContentType.JSON)
+                .contentType(ContentType.JSON)
+                .header("Authorization", accessToken.serialize())
+                .body("[[\"getMailboxes\", {\"properties\": [\"role\", \"id\"]}, \"#0\"]]")
+                // .log().ifValidationFails()
+                .post("/jmap")
+                .andReturn()
+                .body()
+                .jsonPath()
+                .getList(ARGUMENTS + ".list");
+
+        String outboxId = mailboxes.stream().filter(x -> x.get("role").equals("outbox")).map(x -> x.get("id")).findFirst().get();
+
+        String messageCreationId = "super-id";
+        String requestBody = "[" +
+                "  [" +
+                "    \"setMessages\","+
+                "    {" +
+                "      \"create\": { \"" + messageCreationId  + "\" : {" +
+                "        \"from\": { \"name\": \"MAILER-DEAMON\", \"email\": \"postmaster@example.com\"}," +
+                "        \"to\": [{ \"name\": \"BOB\", \"email\": \"someone@example.com\"}]," +
+                "        \"subject\": \"Thank you for joining example.com!\"," +
+                "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
+                "        \"mailboxIds\": [\"" + outboxId + "\"]" +
+                "      }}" +
+                "    }," +
+                "    \"#0\"" +
+                "  ]" +
+                "]";
+
+        given()
+                .accept(ContentType.JSON)
+                .contentType(ContentType.JSON)
+                .header("Authorization", accessToken.serialize())
+                .body(requestBody)
+        .when()
+                .post("/jmap")
+        .then()
+                // .log().ifValidationFails()
+                .log().all()
+                .statusCode(200)
+                .body(NAME, equalTo("messagesSet"))
+                .body(ARGUMENTS + ".created", aMapWithSize(1))
+                .body(ARGUMENTS + ".notCreated", hasSize(0))
+                .body(ARGUMENTS + ".created", hasEntry(equalTo(messageCreationId), Matchers.allOf(
+                        hasEntry("id", not(isEmptyOrNullString())),
+                        hasEntry("blobId", not(isEmptyOrNullString())),
+                        hasEntry("threadId", not(isEmptyOrNullString())),
+                        hasEntry("size", not(isEmptyOrNullString()))
+                ))) ;
+
+        /*
+ [qtp296552796-285] ERROR org.apache.james.jmap.methods.RequestHandler - Error occured while parsing the request.
+com.fasterxml.jackson.databind.JsonMappingException: Can not deserialize instance of java.util.ArrayList out of START_OBJECT token
+ at [Source: {"create":{"mailboxIds":["df69f7d0-d19e-11e5-913a-f5149b209dd7"],"from":"postmaster@example.com","to":"someone@example.com","subject":"Thank you for joining example.com!","textBody":"Hello someone, and thank you for joining example.com!"}}; line: 1, column: 2] (through reference chain: org.apache.james.jmap.model.Builder["create"])
+	at com.fasterxml.jackson.databind.JsonMappingException.from(JsonMappingException.java:148)
+         */
     }
 }
