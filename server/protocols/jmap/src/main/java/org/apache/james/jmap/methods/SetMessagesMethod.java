@@ -56,13 +56,17 @@ public class SetMessagesMethod<Id extends MailboxId> implements Method {
     private final MailboxMapperFactory<Id> mailboxMapperFactory;
     private final MailboxSessionMapperFactory<Id> mailboxSessionMapperFactory;
     private final SetMessagesUpdateProcessor<Id> messageUpdater;
+    private final SetMessagesCreationProcessor messageCreator;
 
     @Inject
     @VisibleForTesting SetMessagesMethod(MailboxMapperFactory<Id> mailboxMapperFactory,
-                                         MailboxSessionMapperFactory<Id> mailboxSessionMapperFactory, SetMessagesUpdateProcessor<Id> messageUpdater) {
+                                         MailboxSessionMapperFactory<Id> mailboxSessionMapperFactory,
+                                         SetMessagesUpdateProcessor<Id> messageUpdater,
+                                         SetMessagesCreationProcessor messageCreator) {
         this.mailboxMapperFactory = mailboxMapperFactory;
         this.mailboxSessionMapperFactory = mailboxSessionMapperFactory;
         this.messageUpdater = messageUpdater;
+        this.messageCreator = messageCreator;
     }
 
     @Override
@@ -96,6 +100,7 @@ public class SetMessagesMethod<Id extends MailboxId> implements Method {
         SetMessagesResponse.Builder responseBuilder = SetMessagesResponse.builder();
         processDestroy(request.getDestroy(), mailboxSession, responseBuilder);
         messageUpdater.processUpdates(request, mailboxSession).mergeInto(responseBuilder);
+        messageCreator.process(request, mailboxSession).mergeInto(responseBuilder);
         return responseBuilder.build();
     }
 
