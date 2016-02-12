@@ -647,7 +647,7 @@ public abstract class SetMessagesMethodTest {
 
         String outboxId = mailboxes.stream().filter(x -> x.get("role").equals("outbox")).map(x -> x.get("id")).findFirst().get();
 
-        String messageCreationId = "super-id";
+        String messageCreationId = "user|inbox|1";
         String requestBody = "[" +
                 "  [" +
                 "    \"setMessages\","+
