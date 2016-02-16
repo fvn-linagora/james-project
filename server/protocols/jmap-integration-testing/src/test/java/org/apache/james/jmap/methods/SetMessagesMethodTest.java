@@ -38,6 +38,7 @@ import java.io.ByteArrayInputStream;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+
 import javax.mail.Flags;
 
 import org.apache.james.backends.cassandra.EmbeddedCassandra;
@@ -48,21 +49,19 @@ import org.apache.james.mailbox.elasticsearch.EmbeddedElasticSearch;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.MailboxConstants;
 import org.apache.james.mailbox.model.MailboxPath;
-
-import com.google.common.base.Charsets;
-import com.jayway.restassured.RestAssured;
-import com.jayway.restassured.builder.ResponseSpecBuilder;
-import com.jayway.restassured.http.ContentType;
-import com.jayway.restassured.specification.ResponseSpecification;
-
 import org.hamcrest.Matchers;
-
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TemporaryFolder;
+
+import com.google.common.base.Charsets;
+import com.jayway.restassured.RestAssured;
+import com.jayway.restassured.builder.ResponseSpecBuilder;
+import com.jayway.restassured.http.ContentType;
+import com.jayway.restassured.specification.ResponseSpecification;
 
 public abstract class SetMessagesMethodTest {
 
@@ -670,7 +669,14 @@ public abstract class SetMessagesMethodTest {
                         hasEntry(equalTo("blobId"), not(isEmptyOrNullString())),
                         hasEntry(equalTo("threadId"), not(isEmptyOrNullString())),
                         hasEntry(equalTo("size"), not(isEmptyOrNullString()))
-                )));
+                )))
+                .body(ARGUMENTS + ".created", hasEntry(equalTo(messageCreationId), Matchers.allOf(
+                        hasEntry(equalTo("isDraft"), equalTo(false)),
+                        hasEntry(equalTo("isUnread"), equalTo(false)),
+                        hasEntry(equalTo("isFlagged"), equalTo(false)),
+                        hasEntry(equalTo("isAnswered"), equalTo(false))
+                )))
+                ;
     }
 
     private String getOutboxId() {

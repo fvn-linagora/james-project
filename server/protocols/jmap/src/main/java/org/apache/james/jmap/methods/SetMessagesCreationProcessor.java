@@ -19,22 +19,18 @@
 
 package org.apache.james.jmap.methods;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Optional;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+
 import javax.inject.Inject;
 import javax.mail.Flags;
 import javax.mail.internet.SharedInputStream;
 import javax.mail.util.SharedByteArrayInputStream;
 
+import org.apache.james.jmap.exceptions.MailboxRoleNotFoundException;
 import org.apache.james.jmap.model.CreationMessage;
-import org.apache.james.jmap.model.Emailer;
 import org.apache.james.jmap.model.Message;
 import org.apache.james.jmap.model.MessageId;
 import org.apache.james.jmap.model.SetMessagesRequest;
@@ -54,40 +50,15 @@ import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.apache.james.mailbox.store.mail.model.impl.PropertyBuilder;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleMailboxMessage;
-import org.apache.james.mime4j.dom.Header;
-import org.apache.james.mime4j.dom.TextBody;
-import org.apache.james.mime4j.field.Fields;
-import org.apache.james.mime4j.message.BasicBodyFactory;
-import org.apache.james.mime4j.message.DefaultMessageBuilder;
-import org.apache.james.mime4j.message.DefaultMessageWriter;
-import org.apache.james.mime4j.message.HeaderImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.github.fge.lambdas.consumers.ThrowingBiConsumer;
 import com.github.fge.lambdas.functions.ThrowingFunction;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 public class SetMessagesCreationProcessor<Id extends MailboxId> {
-
-    private static class CreationMessageEntry extends MessageWithId<CreationMessage> {
-        public CreationMessageEntry(String creationId, CreationMessage message) {
-            super(creationId, message);
-        }
-    }
-
-    private static class MessageWithId<T> {
-        String creationId;
-        T message;
-
-        public MessageWithId(String creationId, T message) {
-            this.creationId = creationId;
-            this.message = message;
-        }
-    }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SetMessagesCreationProcessor.class);
 
@@ -107,7 +78,7 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> {
 
     public SetMessagesResponse process(SetMessagesRequest request, MailboxSession mailboxSession) {
         SetMessagesResponse.Builder responseBuilder = request.getCreate().entrySet().stream()
-                .map(e -> new CreationMessageEntry(e.getKey(), e.getValue()))
+                .map(e -> new MessageWithId.CreationMessageEntry(e.getKey(), e.getValue()))
                 .map(nuMsg -> createEachMessage(nuMsg, mailboxSession))
                 .reduce(SetMessagesResponse.builder(),
                         (builder, msg) -> builder.created(ImmutableMap.of(msg.creationId, msg.message)),
@@ -116,7 +87,7 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> {
         return responseBuilder.build();
     }
 
-    private MessageWithId<Message> createEachMessage(CreationMessageEntry createdEntry, MailboxSession session) {
+    private MessageWithId<Message> createEachMessage(MessageWithId.CreationMessageEntry createdEntry, MailboxSession session) {
         try {
             MessageMapper<Id> messageMapper = mailboxSessionMapperFactory.createMessageMapper(session);
 
@@ -132,10 +103,10 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> {
             long size = messageContent.length;
             int bodyStartOctet = 0;
 
-            Date internalDate = Date.from(Instant.now());
-            Flags flags = getMessageFlags();
+            Flags flags = getMessageFlags(createdEntry.message);
             PropertyBuilder propertyBuilder = buildPropertyBuilder();
             MailboxId mailboxId = outbox.get().getMailboxId();
+            Date internalDate = Date.from(createdEntry.message.getDate().toInstant());
 
             MailboxMessage<Id> newMailboxMessage = new SimpleMailboxMessage(internalDate, size,
                     bodyStartOctet, content, flags, propertyBuilder, mailboxId);
@@ -163,88 +134,24 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> {
         return path -> mailboxMapperFactory.getMailboxMapper(session).findMailboxByPath(path);
     }
 
-
     private PropertyBuilder buildPropertyBuilder() {
         return new PropertyBuilder();
     }
 
-    private Flags getMessageFlags() {
-        return new Flags();
-    }
-
-
-    private static class MIMEMessageConverter {
-
-        private final CreationMessageEntry creationMessageEntry;
-
-        MIMEMessageConverter(CreationMessageEntry creationMessageEntry) {
-            this.creationMessageEntry = creationMessageEntry;
+    private Flags getMessageFlags(CreationMessage message) {
+        Flags result = new Flags();
+        if (!message.isIsUnread()) {
+            result.add(Flags.Flag.SEEN);
         }
-
-        byte[] getContent() {
-
-            CreationMessage newMessage = creationMessageEntry.message;
-
-            TextBody textBody = new BasicBodyFactory().textBody(newMessage.getTextBody().orElse(""));
-            org.apache.james.mime4j.dom.Message message = new DefaultMessageBuilder().newMessage();
-            message.setBody(textBody);
-
-            Header messageHeaders = new HeaderImpl();
-
-            // add From: and Sender: headers
-            newMessage.getFrom().map(this::convertEmailToMimeHeader)
-                    .map(mb -> Fields.from(mb))
-                    .ifPresent(f -> messageHeaders.addField(f));
-            newMessage.getFrom().map(this::convertEmailToMimeHeader)
-                    .map(mb -> Fields.sender(mb))
-                    .ifPresent(f -> messageHeaders.addField(f));
-            // add To: headers
-            messageHeaders.addField(Fields.to(newMessage.getTo().stream()
-                    .map(this::convertEmailToMimeHeader)
-                    .collect(Collectors.toList())));
-            // add Cc: headers
-            messageHeaders.addField(Fields.cc(newMessage.getCc().stream()
-                    .map(this::convertEmailToMimeHeader)
-                    .collect(Collectors.toList())));
-            // add Bcc: headers
-            messageHeaders.addField(Fields.bcc(newMessage.getBcc().stream()
-                    .map(this::convertEmailToMimeHeader)
-                    .collect(Collectors.toList())));
-            // add Subject: header
-            messageHeaders.addField(Fields.subject(newMessage.getSubject()));
-            // set creation Id as MessageId: header
-            messageHeaders.addField(Fields.messageId(creationMessageEntry.creationId));
-
-            message.setHeader(messageHeaders);
-
-            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-            DefaultMessageWriter writer = new DefaultMessageWriter();
-            try {
-                writer.writeMessage(message, buffer);
-            } catch (IOException e) {
-                throw Throwables.propagate(e);
-            }
-            return buffer.toByteArray();
+        if (message.isIsFlagged()) {
+            result.add(Flags.Flag.FLAGGED);
         }
-
-        private org.apache.james.mime4j.dom.address.Mailbox convertEmailToMimeHeader(Emailer address) {
-            String[] splittedAddress = address.getEmail().split("@", 2);
-            return new org.apache.james.mime4j.dom.address.Mailbox(address.getName(), null,
-                    splittedAddress[0], splittedAddress[1]);
+        if (message.isIsAnswered() || message.getInReplyToMessageId().isPresent()) {
+            result.add(Flags.Flag.ANSWERED);
         }
-    }
-
-    private static class MailboxRoleNotFoundException extends RuntimeException {
-
-        final Role role;
-
-        public MailboxRoleNotFoundException(Role role) {
-            super(String.format("Could not find any mailbox with role '%s'", role.serialize()));
-            this.role = role;
+        if (message.isIsDraft()) {
+            result.add(Flags.Flag.DRAFT);
         }
-
-        public Role getRole() {
-            return role;
-        }
+        return result;
     }
 }
