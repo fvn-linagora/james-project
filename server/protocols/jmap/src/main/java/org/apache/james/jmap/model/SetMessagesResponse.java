@@ -45,7 +45,7 @@ public class SetMessagesResponse implements Method.Response {
         private String accountId;
         private String oldState;
         private String newState;
-        private ImmutableList.Builder<Message> created;
+        private ImmutableMap.Builder<String, Message> created;
         private ImmutableList.Builder<MessageId> updated;
         private ImmutableList.Builder<MessageId> destroyed;
         private ImmutableMap.Builder<MessageId, SetError> notCreated;
@@ -53,7 +53,7 @@ public class SetMessagesResponse implements Method.Response {
         private ImmutableMap.Builder<MessageId, SetError> notDestroyed;
 
         private Builder() {
-            created = ImmutableList.builder();
+            created = ImmutableMap.builder();
             updated = ImmutableList.builder();
             destroyed = ImmutableList.builder();
             notCreated = ImmutableMap.builder();
@@ -73,8 +73,8 @@ public class SetMessagesResponse implements Method.Response {
             throw new NotImplementedException();
         }
 
-        public Builder created(List<Message> created) {
-            this.created.addAll(created);
+        public Builder created(Map<String, Message> created) {
+            this.created.putAll(created);
             return this;
         }
 
@@ -122,14 +122,14 @@ public class SetMessagesResponse implements Method.Response {
     private final String accountId;
     private final String oldState;
     private final String newState;
-    private final List<Message> created;
+    private final Map<String, Message> created;
     private final List<MessageId> updated;
     private final List<MessageId> destroyed;
     private final Map<MessageId, SetError> notCreated;
     private final Map<MessageId, SetError> notUpdated;
     private final Map<MessageId, SetError> notDestroyed;
 
-    @VisibleForTesting SetMessagesResponse(String accountId, String oldState, String newState, List<Message> created, List<MessageId> updated, List<MessageId> destroyed, 
+    @VisibleForTesting SetMessagesResponse(String accountId, String oldState, String newState, Map<String, Message> created, List<MessageId> updated, List<MessageId> destroyed,
             Map<MessageId, SetError> notCreated, Map<MessageId, SetError> notUpdated, Map<MessageId, SetError> notDestroyed) {
         this.accountId = accountId;
         this.oldState = oldState;
@@ -158,7 +158,7 @@ public class SetMessagesResponse implements Method.Response {
     }
 
     @JsonSerialize
-    public List<Message> getCreated() {
+    public Map<String, Message> getCreated() {
         return created;
     }
 

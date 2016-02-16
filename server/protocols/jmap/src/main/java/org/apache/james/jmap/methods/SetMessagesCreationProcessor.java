@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -61,19 +62,28 @@ import org.apache.james.mime4j.message.DefaultMessageBuilder;
 import org.apache.james.mime4j.message.DefaultMessageWriter;
 import org.apache.james.mime4j.message.HeaderImpl;
 
+import com.github.fge.lambdas.consumers.ThrowingBiConsumer;
 import com.github.fge.lambdas.functions.ThrowingFunction;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class SetMessagesCreationProcessor<Id extends MailboxId> {
 
-    private static class CreationMessageEntry {
-        String creationId;
-        CreationMessage message;
-
+    private static class CreationMessageEntry extends MessageWithId<CreationMessage> {
         public CreationMessageEntry(String creationId, CreationMessage message) {
+            super(creationId, message);
+        }
+    }
+
+    private static class MessageWithId<T> {
+        String creationId;
+        T message;
+
+        public MessageWithId(String creationId, T message) {
             this.creationId = creationId;
             this.message = message;
         }
@@ -96,19 +106,20 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> {
     }
 
     public SetMessagesResponse process(SetMessagesRequest request, MailboxSession mailboxSession) {
-        SetMessagesResponse.Builder responseBuilder = SetMessagesResponse.builder();
-        Stream<CreationMessageEntry> messagesToCreate = request.getCreate().entrySet().stream()
-                .map(e -> new CreationMessageEntry(e.getKey(), e.getValue()));
-        messagesToCreate.map( nuMsg -> createEachMessage(nuMsg, mailboxSession));
-
+        SetMessagesResponse.Builder responseBuilder = request.getCreate().entrySet().stream()
+                .map(e -> new CreationMessageEntry(e.getKey(), e.getValue()))
+                .map(nuMsg -> createEachMessage(nuMsg, mailboxSession))
+                .reduce(SetMessagesResponse.builder(),
+                        (builder, msg) -> builder.created(ImmutableMap.of(msg.creationId, msg.message)),
+                        (builder1, builder2) -> builder1.created(builder2.build().getCreated())
+                );
         return responseBuilder.build();
     }
 
-    private Message createEachMessage(CreationMessageEntry createdEntry, MailboxSession session) {
+    private MessageWithId<Message> createEachMessage(CreationMessageEntry createdEntry, MailboxSession session) {
         try {
             MessageMapper<Id> messageMapper = mailboxSessionMapperFactory.createMessageMapper(session);
 
-            // Find mailbox
             Optional<Mailbox> outbox = mailboxManager.search(MailboxQuery.builder(session)
                     .privateUserMailboxes().build(), session).stream()
                 .map(MailboxMetaData::getPath)
@@ -116,25 +127,23 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> {
                 .map(loadMailbox(session))
                 .findFirst();
 
-            Date internalDate = Date.from(Instant.now()); // why not ?!
-
             byte[] messageContent = new MIMEMessageConverter(createdEntry).getContent();
             SharedInputStream content = new SharedByteArrayInputStream(messageContent);
             long size = messageContent.length;
             int bodyStartOctet = 0;
 
+            Date internalDate = Date.from(Instant.now());
             Flags flags = getMessageFlags();
             PropertyBuilder propertyBuilder = buildPropertyBuilder();
             MailboxId mailboxId = outbox.get().getMailboxId();
 
             MailboxMessage<Id> newMailboxMessage = new SimpleMailboxMessage(internalDate, size,
                     bodyStartOctet, content, flags, propertyBuilder, mailboxId);
-
             messageMapper.add(outbox.orElseThrow(() -> new MailboxRoleNotFoundException(Role.OUTBOX)), newMailboxMessage);
 
             Function<Long, MessageId> buildMessageIdFromUid = uid -> MessageId.of(
                     String.format("%s|outbox|%d", session.getUser().getUserName(), uid));
-            return Message.fromMailboxMessage(newMailboxMessage, buildMessageIdFromUid);
+            return new MessageWithId<>(createdEntry.creationId, Message.fromMailboxMessage(newMailboxMessage, buildMessageIdFromUid));
 
         } catch (MailboxException e) {
             throw Throwables.propagate(e);

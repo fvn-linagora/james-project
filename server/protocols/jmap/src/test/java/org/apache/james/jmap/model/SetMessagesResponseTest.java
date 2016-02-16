@@ -58,7 +58,7 @@ public class SetMessagesResponseTest {
     @Test
     public void builderShouldWork() {
         ZonedDateTime currentDate = ZonedDateTime.now();
-        ImmutableList<Message> created = ImmutableList.of(
+        ImmutableMap<String, Message> created = ImmutableMap.of("user|created|1",
             Message.builder()
                 .id(MessageId.of("user|created|1"))
                 .blobId("blobId")
@@ -108,8 +108,8 @@ public class SetMessagesResponseTest {
         assertThat(emptyBuilder.build()).isEqualToComparingFieldByField(testee);
     }
 
-    private ImmutableList<Message> buildMessage(String messageId) {
-        return ImmutableList.of(Message.builder()
+    private ImmutableMap<String, Message> buildMessage(String messageId) {
+        return ImmutableMap.of(messageId, Message.builder()
                 .id(MessageId.of(messageId))
                 .blobId("blobId")
                 .threadId("threadId")
@@ -155,10 +155,7 @@ public class SetMessagesResponseTest {
         SetMessagesResponse mergedResponse = nonEmptyBuilder.build();
 
         // Then
-        List<String> createdMessageIds = mergedResponse.getCreated().stream()
-                .map(m -> m.getId().serialize())
-                .collect(Collectors.toList());
-        assertThat(createdMessageIds).containsExactly(buildersCreatedMessageId, createdMessageId);
+        assertThat(mergedResponse.getCreated().keySet()).containsExactly(buildersCreatedMessageId, createdMessageId);
     }
 
     @Test
