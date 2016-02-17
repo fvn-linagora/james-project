@@ -35,6 +35,10 @@ import org.apache.james.jmap.methods.SetMessagesMethod;
 import org.apache.james.jmap.methods.SetMessagesProcessor;
 import org.apache.james.jmap.methods.SetMessagesUpdateProcessor;
 import org.apache.james.mailbox.cassandra.CassandraId;
+import org.apache.james.mime4j.dom.MessageBuilder;
+import org.apache.james.mime4j.message.BasicBodyFactory;
+import org.apache.james.mime4j.message.BodyFactory;
+import org.apache.james.mime4j.message.DefaultMessageBuilder;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
@@ -61,6 +65,9 @@ public class MethodsModule extends AbstractModule {
         methods.addBinding().to(new TypeLiteral<SetMessagesMethod<CassandraId>>(){});
         bind(SetMessagesUpdateProcessor.class).to(new TypeLiteral<SetMessagesUpdateProcessor<CassandraId>>(){});
         bind(SetMessagesCreationProcessor.class).to(new TypeLiteral<SetMessagesCreationProcessor<CassandraId>>(){});
+        bind(MessageBuilder.class).to(DefaultMessageBuilder.class);
+        bind(BodyFactory.class).to(BasicBodyFactory.class);
+
     }
 
     @Provides

@@ -64,15 +64,17 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
     private final MailboxMapperFactory<Id> mailboxMapperFactory;
     private final MailboxManager mailboxManager;
     private final MailboxSessionMapperFactory<Id> mailboxSessionMapperFactory;
+    private final MIMEMessageConverter mimeMessageConverter;
 
     @Inject
     @VisibleForTesting
     SetMessagesCreationProcessor(MailboxMapperFactory<Id> mailboxMapperFactory,
-                                        MailboxManager mailboxManager,
-                                        MailboxSessionMapperFactory<Id> mailboxSessionMapperFactory) {
+                                 MailboxManager mailboxManager,
+                                 MailboxSessionMapperFactory<Id> mailboxSessionMapperFactory, MIMEMessageConverter mimeMessageConverter) {
         this.mailboxMapperFactory = mailboxMapperFactory;
         this.mailboxManager = mailboxManager;
         this.mailboxSessionMapperFactory = mailboxSessionMapperFactory;
+        this.mimeMessageConverter = mimeMessageConverter;
     }
 
     @Override
@@ -87,7 +89,7 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
         return responseBuilder.build();
     }
 
-    private MessageWithId<Message> createEachMessage(MessageWithId.CreationMessageEntry createdEntry, MailboxSession session) {
+    protected MessageWithId<Message> createEachMessage(MessageWithId.CreationMessageEntry createdEntry, MailboxSession session) {
         try {
             MessageMapper<Id> messageMapper = mailboxSessionMapperFactory.createMessageMapper(session);
             Optional<Mailbox> outbox = getOutbox(session);
@@ -108,7 +110,7 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
     }
 
     private MailboxMessage<Id> buildMailboxMessage(MessageWithId.CreationMessageEntry createdEntry, Optional<Mailbox> outbox) {
-        byte[] messageContent = new MIMEMessageConverter(createdEntry).getContent();
+        byte[] messageContent = mimeMessageConverter.getMimeContent(createdEntry);
         SharedInputStream content = new SharedByteArrayInputStream(messageContent);
         long size = messageContent.length;
         int bodyStartOctet = 0;
