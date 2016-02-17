@@ -19,7 +19,6 @@
 
 package org.apache.james.jmap.methods;
 
-import java.time.Instant;
 import java.util.Date;
 import java.util.Optional;
 import java.util.function.Function;
@@ -58,7 +57,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 
-public class SetMessagesCreationProcessor<Id extends MailboxId> {
+public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMessagesProcessor<Id> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SetMessagesCreationProcessor.class);
 
@@ -76,6 +75,7 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> {
         this.mailboxSessionMapperFactory = mailboxSessionMapperFactory;
     }
 
+    @Override
     public SetMessagesResponse process(SetMessagesRequest request, MailboxSession mailboxSession) {
         SetMessagesResponse.Builder responseBuilder = request.getCreate().entrySet().stream()
                 .map(e -> new MessageWithId.CreationMessageEntry(e.getKey(), e.getValue()))
@@ -90,26 +90,9 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> {
     private MessageWithId<Message> createEachMessage(MessageWithId.CreationMessageEntry createdEntry, MailboxSession session) {
         try {
             MessageMapper<Id> messageMapper = mailboxSessionMapperFactory.createMessageMapper(session);
+            Optional<Mailbox> outbox = getOutbox(session);
+            MailboxMessage<Id> newMailboxMessage = buildMailboxMessage(createdEntry, outbox);
 
-            Optional<Mailbox> outbox = mailboxManager.search(MailboxQuery.builder(session)
-                    .privateUserMailboxes().build(), session).stream()
-                .map(MailboxMetaData::getPath)
-                .filter(this::hasRoleOutbox)
-                .map(loadMailbox(session))
-                .findFirst();
-
-            byte[] messageContent = new MIMEMessageConverter(createdEntry).getContent();
-            SharedInputStream content = new SharedByteArrayInputStream(messageContent);
-            long size = messageContent.length;
-            int bodyStartOctet = 0;
-
-            Flags flags = getMessageFlags(createdEntry.message);
-            PropertyBuilder propertyBuilder = buildPropertyBuilder();
-            MailboxId mailboxId = outbox.get().getMailboxId();
-            Date internalDate = Date.from(createdEntry.message.getDate().toInstant());
-
-            MailboxMessage<Id> newMailboxMessage = new SimpleMailboxMessage(internalDate, size,
-                    bodyStartOctet, content, flags, propertyBuilder, mailboxId);
             messageMapper.add(outbox.orElseThrow(() -> new MailboxRoleNotFoundException(Role.OUTBOX)), newMailboxMessage);
 
             Function<Long, MessageId> buildMessageIdFromUid = uid -> MessageId.of(
@@ -122,6 +105,30 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> {
             LOGGER.error("Could not find mailbox '%s' while trying to save message.", e.getRole().serialize());
             throw Throwables.propagate(e);
         }
+    }
+
+    private MailboxMessage<Id> buildMailboxMessage(MessageWithId.CreationMessageEntry createdEntry, Optional<Mailbox> outbox) {
+        byte[] messageContent = new MIMEMessageConverter(createdEntry).getContent();
+        SharedInputStream content = new SharedByteArrayInputStream(messageContent);
+        long size = messageContent.length;
+        int bodyStartOctet = 0;
+
+        Flags flags = getMessageFlags(createdEntry.message);
+        PropertyBuilder propertyBuilder = buildPropertyBuilder();
+        MailboxId mailboxId = outbox.get().getMailboxId();
+        Date internalDate = Date.from(createdEntry.message.getDate().toInstant());
+
+        return new SimpleMailboxMessage(internalDate, size,
+                bodyStartOctet, content, flags, propertyBuilder, mailboxId);
+    }
+
+    private Optional<Mailbox> getOutbox(MailboxSession session) throws MailboxException {
+        return mailboxManager.search(MailboxQuery.builder(session)
+                .privateUserMailboxes().build(), session).stream()
+            .map(MailboxMetaData::getPath)
+            .filter(this::hasRoleOutbox)
+            .map(loadMailbox(session))
+            .findFirst();
     }
 
     private boolean hasRoleOutbox(MailboxPath mailBoxPath) {
