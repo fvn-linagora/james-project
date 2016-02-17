@@ -97,8 +97,13 @@ public class SetMessagesMethod<Id extends MailboxId> implements Method {
     private SetMessagesResponse setMessagesResponse(SetMessagesRequest request, MailboxSession mailboxSession) throws MailboxException {
         SetMessagesResponse.Builder responseBuilder = SetMessagesResponse.builder();
         processDestroy(request.getDestroy(), mailboxSession, responseBuilder);
-        messagesProcessors.stream().forEach(processor -> processor.process(request, mailboxSession));
-        return responseBuilder.build();
+        return messagesProcessors.stream()
+                .map(processor -> processor.process(request, mailboxSession))
+                .reduce(responseBuilder,
+                        (builder, resp) -> resp.mergeInto(builder) ,
+                        (builder1, builder2) -> builder2.build().mergeInto(builder1)
+                )
+                .build();
     }
 
     private void processDestroy(List<MessageId> messageIds, MailboxSession mailboxSession, SetMessagesResponse.Builder responseBuilder) throws MailboxException {
