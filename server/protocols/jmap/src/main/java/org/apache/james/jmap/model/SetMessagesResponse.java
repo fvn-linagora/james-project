@@ -187,7 +187,7 @@ public class SetMessagesResponse implements Method.Response {
         return notDestroyed;
     }
 
-    public void mergeInto(SetMessagesResponse.Builder responseBuilder) {
+    public SetMessagesResponse.Builder mergeInto(SetMessagesResponse.Builder responseBuilder) {
         responseBuilder.created(getCreated());
         responseBuilder.updated(getUpdated());
         responseBuilder.destroyed(getDestroyed());
@@ -203,5 +203,6 @@ public class SetMessagesResponse implements Method.Response {
         if(! Strings.isNullOrEmpty(getNewState())) {
             responseBuilder.accountId(getAccountId());
         }
+        return responseBuilder;
     }
 }
