@@ -21,38 +21,69 @@ package org.apache.james.jmap.methods;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.time.Instant;
 import java.util.Date;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
 
+import javax.inject.Inject;
+
 import org.apache.james.jmap.model.CreationMessage;
 import org.apache.james.jmap.model.Emailer;
+import org.apache.james.mime4j.Charsets;
+import org.apache.james.mime4j.codec.DecodeMonitor;
+import org.apache.james.mime4j.dom.FieldParser;
 import org.apache.james.mime4j.dom.Header;
+import org.apache.james.mime4j.dom.Message;
+import org.apache.james.mime4j.dom.MessageBuilder;
 import org.apache.james.mime4j.dom.TextBody;
+import org.apache.james.mime4j.dom.address.Mailbox;
+import org.apache.james.mime4j.dom.field.UnstructuredField;
 import org.apache.james.mime4j.field.Fields;
+import org.apache.james.mime4j.field.UnstructuredFieldImpl;
+import org.apache.james.mime4j.io.InputStreams;
 import org.apache.james.mime4j.message.BasicBodyFactory;
+import org.apache.james.mime4j.message.BodyFactory;
 import org.apache.james.mime4j.message.DefaultMessageBuilder;
 import org.apache.james.mime4j.message.DefaultMessageWriter;
 import org.apache.james.mime4j.message.HeaderImpl;
+import org.apache.james.mime4j.stream.RawField;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 
 class MIMEMessageConverter {
 
-    private final MessageWithId.CreationMessageEntry creationMessageEntry;
+    private final MessageBuilder messageBuilder;
+    private final BodyFactory bodyFactory;
 
-    MIMEMessageConverter(MessageWithId.CreationMessageEntry creationMessageEntry) {
-        this.creationMessageEntry = creationMessageEntry;
+    @Inject
+    @VisibleForTesting MIMEMessageConverter(MessageBuilder messageBuilder, BodyFactory bodyFactory) {
+        this.messageBuilder = messageBuilder;
+        this.bodyFactory = bodyFactory;
     }
 
-    byte[] getContent() {
+    MIMEMessageConverter() { this(new DefaultMessageBuilder(), new BasicBodyFactory()); }
 
+    public byte[] getMimeContent(MessageWithId.CreationMessageEntry creationMessageEntry) {
+
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        DefaultMessageWriter writer = new DefaultMessageWriter();
+        try {
+            writer.writeMessage(convertToMime(creationMessageEntry), buffer);
+        } catch (IOException e) {
+            throw Throwables.propagate(e);
+        }
+        return buffer.toByteArray();
+    }
+
+    @VisibleForTesting Message convertToMime(MessageWithId.CreationMessageEntry creationMessageEntry) {
+        if (creationMessageEntry == null || creationMessageEntry.message == null) {
+            throw new IllegalArgumentException("creationMessageEntry is either null or has null message");
+        }
         CreationMessage newMessage = creationMessageEntry.message;
 
-        TextBody textBody = new BasicBodyFactory().textBody(newMessage.getTextBody().orElse(""));
-        org.apache.james.mime4j.dom.Message message = new DefaultMessageBuilder().newMessage();
-        message.setBody(textBody);
+        Message message = messageBuilder.newMessage();
+        message.setBody(createTextBody(newMessage));
 
         Header messageHeaders = new HeaderImpl();
 
@@ -61,7 +92,7 @@ class MIMEMessageConverter {
                 .map(Fields::from)
                 .ifPresent(f -> messageHeaders.addField(f));
         newMessage.getFrom().map(this::convertEmailToMimeHeader)
-                .map(Fields::from)
+                .map(Fields::sender)
                 .ifPresent(f -> messageHeaders.addField(f));
 
         // add Reply-To:
@@ -86,23 +117,33 @@ class MIMEMessageConverter {
         messageHeaders.addField(Fields.messageId(creationMessageEntry.creationId));
 
         // date(String fieldName, Date date, TimeZone zone)
+        // note that date conversion probably lose milliseconds !
         messageHeaders.addField(Fields.date("Date",
                 Date.from(newMessage.getDate().toInstant()), TimeZone.getTimeZone(newMessage.getDate().getZone())
         ));
 
-        message.setHeader(messageHeaders);
+        newMessage.getInReplyToMessageId()
+                .ifPresent(msgId -> {
+                    FieldParser<UnstructuredField> parser = UnstructuredFieldImpl.PARSER;
+                    RawField rawField = new RawField("In-Reply-To", msgId);
+                    messageHeaders.addField(parser.parse(rawField, DecodeMonitor.SILENT));
+                });
 
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        DefaultMessageWriter writer = new DefaultMessageWriter();
+        message.setHeader(messageHeaders);
+        return message;
+    }
+
+    private TextBody createTextBody(CreationMessage newMessage) {
         try {
-            writer.writeMessage(message, buffer);
+            return bodyFactory.textBody(
+                    InputStreams.create(newMessage.getTextBody().orElse(""), Charsets.DEFAULT_CHARSET),
+                    Charsets.DEFAULT_CHARSET.name());
         } catch (IOException e) {
             throw Throwables.propagate(e);
         }
-        return buffer.toByteArray();
     }
 
-    private org.apache.james.mime4j.dom.address.Mailbox convertEmailToMimeHeader(Emailer address) {
+    private Mailbox convertEmailToMimeHeader(Emailer address) {
         String[] splittedAddress = address.getEmail().split("@", 2);
         return new org.apache.james.mime4j.dom.address.Mailbox(address.getName(), null,
                 splittedAddress[0], splittedAddress[1]);
