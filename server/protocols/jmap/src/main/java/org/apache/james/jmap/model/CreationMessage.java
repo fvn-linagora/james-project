@@ -165,6 +165,12 @@ public class CreationMessage {
             return this;
         }
 
+        private static boolean areAttachedMessagesKeysInAttachments(ImmutableList<Attachment> attachments, ImmutableMap<String, SubMessage> attachedMessages) {
+            return attachments.stream()
+                    .map(Attachment::getBlobId)
+                    .allMatch(attachedMessages::containsKey);
+        }
+
         public CreationMessage build() {
             Preconditions.checkState(mailboxIds != null, "'mailboxIds' is mandatory");
             Preconditions.checkState(headers != null, "'headers' is mandatory");
@@ -180,12 +186,6 @@ public class CreationMessage {
             return new CreationMessage(mailboxIds, Optional.ofNullable(inReplyToMessageId), isUnread, isFlagged, isAnswered, isDraft, headers.build(), Optional.ofNullable(from),
                     to.build(), cc.build(), bcc.build(), replyTo.build(), subject, date, Optional.ofNullable(textBody), Optional.ofNullable(htmlBody), attachments, attachedMessages);
         }
-    }
-
-    protected static boolean areAttachedMessagesKeysInAttachments(ImmutableList<Attachment> attachments, ImmutableMap<String, SubMessage> attachedMessages) {
-        return attachments.stream()
-                .map(Attachment::getBlobId)
-                .allMatch(attachedMessages::containsKey);
     }
 
     private final ImmutableList<String> mailboxIds;

@@ -25,17 +25,22 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.time.ZonedDateTime;
+import java.util.Optional;
+import java.util.function.Function;
 
 import org.apache.james.jmap.model.CreationMessage;
 import org.apache.james.jmap.model.Emailer;
 import org.apache.james.jmap.model.Message;
+import org.apache.james.jmap.model.MessageId;
 import org.apache.james.jmap.model.SetMessagesRequest;
 import org.apache.james.jmap.model.SetMessagesResponse;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.mail.MessageMapper;
+import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
+import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -45,13 +50,30 @@ public class SetMessagesCreationProcessorTest {
 
     @Test
     public void processShouldReturnEmptyCreatedWhenRequestHasEmptyCreate() {
-        SetMessagesCreationProcessor sut = new SetMessagesCreationProcessor(null, null, null, null);
+        SetMessagesCreationProcessor sut = new SetMessagesCreationProcessor<MailboxId>(null, null, null, null) {
+            @Override
+            protected Optional<Mailbox> getOutbox(MailboxSession session) throws MailboxException {
+                Mailbox fakeOutbox = mock(Mailbox.class);
+                when(fakeOutbox.getName()).thenReturn("outbox");
+                return Optional.ofNullable(fakeOutbox);
+            }
+        };
         SetMessagesRequest requestWithEmptyCreate = SetMessagesRequest.builder().build();
 
-        SetMessagesResponse result = sut.process(requestWithEmptyCreate, null);
+        SetMessagesResponse result = sut.process(requestWithEmptyCreate, buildStubbedSession());
 
         assertThat(result.getCreated()).isEmpty();
         assertThat(result.getNotCreated()).isEmpty();
+    }
+
+    private MailboxSession buildStubbedSession() {
+        MailboxSession.User stubUser = mock(MailboxSession.User.class);
+        when(stubUser.getUserName()).thenReturn("user");
+        MailboxSession stubSession = mock(MailboxSession.class);
+        when(stubSession.getPathDelimiter()).thenReturn('.');
+        when(stubSession.getUser()).thenReturn(stubUser);
+        when(stubSession.getPersonalSpace()).thenReturn("no idea!");
+        return stubSession;
     }
 
     @Test
@@ -64,8 +86,14 @@ public class SetMessagesCreationProcessorTest {
 
         SetMessagesCreationProcessor sut = new SetMessagesCreationProcessor<MailboxId>(null, null, mockSessionMapperFactory, null) {
             @Override
-            protected MessageWithId<Message> createEachMessage(MessageWithId.CreationMessageEntry createdEntry, MailboxSession session) {
+            protected MessageWithId<Message> createMessageInOutbox(MessageWithId.CreationMessageEntry createdEntry, MailboxSession session, Mailbox outbox, Function<Long, MessageId> buildMessageIdFromUid) {
                 return new MessageWithId<>(createdEntry.creationId, getFakeMessage());
+            }
+            @Override
+            protected Optional<Mailbox> getOutbox(MailboxSession session) throws MailboxException {
+                Mailbox fakeOutbox = mock(Mailbox.class);
+                when(fakeOutbox.getName()).thenReturn("outbox");
+                return Optional.ofNullable(fakeOutbox);
             }
         };
 
@@ -80,7 +108,7 @@ public class SetMessagesCreationProcessorTest {
                 .build()
                 ;
 
-        SetMessagesResponse result = sut.process(creationRequest, null);
+        SetMessagesResponse result = sut.process(creationRequest, buildStubbedSession());
 
         assertThat(result.getCreated()).isNotEmpty();
         assertThat(result.getNotCreated()).isEmpty();
