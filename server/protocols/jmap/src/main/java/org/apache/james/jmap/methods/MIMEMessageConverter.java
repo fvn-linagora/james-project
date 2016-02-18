@@ -51,7 +51,7 @@ import org.apache.james.mime4j.stream.RawField;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 
-class MIMEMessageConverter {
+public class MIMEMessageConverter {
 
     private final MessageBuilder messageBuilder;
     private final BodyFactory bodyFactory;
@@ -64,7 +64,7 @@ class MIMEMessageConverter {
 
     MIMEMessageConverter() { this(new DefaultMessageBuilder(), new BasicBodyFactory()); }
 
-    public byte[] getMimeContent(MessageWithId.CreationMessageEntry creationMessageEntry) {
+    public byte[] convert(MessageWithId.CreationMessageEntry creationMessageEntry) {
 
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         DefaultMessageWriter writer = new DefaultMessageWriter();
@@ -80,11 +80,14 @@ class MIMEMessageConverter {
         if (creationMessageEntry == null || creationMessageEntry.message == null) {
             throw new IllegalArgumentException("creationMessageEntry is either null or has null message");
         }
-        CreationMessage newMessage = creationMessageEntry.message;
 
         Message message = messageBuilder.newMessage();
-        message.setBody(createTextBody(newMessage));
+        message.setBody(createTextBody(creationMessageEntry.message));
+        message.setHeader(buildMimeHeaders(creationMessageEntry.creationId, creationMessageEntry.message));
+        return message;
+    }
 
+    private Header buildMimeHeaders(String creationId, CreationMessage newMessage) {
         Header messageHeaders = new HeaderImpl();
 
         // add From: and Sender: headers
@@ -114,23 +117,21 @@ class MIMEMessageConverter {
         // add Subject: header
         messageHeaders.addField(Fields.subject(newMessage.getSubject()));
         // set creation Id as MessageId: header
-        messageHeaders.addField(Fields.messageId(creationMessageEntry.creationId));
+        messageHeaders.addField(Fields.messageId(creationId));
 
         // date(String fieldName, Date date, TimeZone zone)
         // note that date conversion probably lose milliseconds !
         messageHeaders.addField(Fields.date("Date",
                 Date.from(newMessage.getDate().toInstant()), TimeZone.getTimeZone(newMessage.getDate().getZone())
         ));
-
+        // deal with InReplyTo header
         newMessage.getInReplyToMessageId()
                 .ifPresent(msgId -> {
                     FieldParser<UnstructuredField> parser = UnstructuredFieldImpl.PARSER;
                     RawField rawField = new RawField("In-Reply-To", msgId);
                     messageHeaders.addField(parser.parse(rawField, DecodeMonitor.SILENT));
                 });
-
-        message.setHeader(messageHeaders);
-        return message;
+        return messageHeaders;
     }
 
     private TextBody createTextBody(CreationMessage newMessage) {

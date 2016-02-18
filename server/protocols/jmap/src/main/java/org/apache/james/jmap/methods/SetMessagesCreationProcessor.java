@@ -110,7 +110,7 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
     }
 
     private MailboxMessage<Id> buildMailboxMessage(MessageWithId.CreationMessageEntry createdEntry, Optional<Mailbox> outbox) {
-        byte[] messageContent = mimeMessageConverter.getMimeContent(createdEntry);
+        byte[] messageContent = mimeMessageConverter.convert(createdEntry);
         SharedInputStream content = new SharedByteArrayInputStream(messageContent);
         long size = messageContent.length;
         int bodyStartOctet = 0;

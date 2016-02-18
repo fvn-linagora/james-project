@@ -73,8 +73,8 @@ public class SetMessagesRequest implements JmapRequest {
             return this;
         }
 
-        public Builder create(Map<String, CreationMessage> creates) {
-            this.create.putAll(creates);
+        public Builder create(Map<String, CreationMessage> creations) {
+            this.create.putAll(creations);
             return this;
         }
 

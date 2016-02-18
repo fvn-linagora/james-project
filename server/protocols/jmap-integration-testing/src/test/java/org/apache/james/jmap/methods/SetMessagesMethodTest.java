@@ -72,6 +72,7 @@ public abstract class SetMessagesMethodTest {
     private EmbeddedElasticSearch embeddedElasticSearch = new EmbeddedElasticSearch(temporaryFolder);
     private EmbeddedCassandra cassandra = EmbeddedCassandra.createStartServer();
     private JmapServer jmapServer = jmapServer(temporaryFolder, embeddedElasticSearch, cassandra);
+    private String outboxId;
 
     protected abstract JmapServer jmapServer(TemporaryFolder temporaryFolder, EmbeddedElasticSearch embeddedElasticSearch, EmbeddedCassandra cassandra);
 
@@ -96,6 +97,23 @@ public abstract class SetMessagesMethodTest {
         jmapServer.serverProbe().addUser(username, password);
         jmapServer.serverProbe().createMailbox("#private", "username", "inbox");
         accessToken = JmapAuthentication.authenticateJamesUser(username, password);
+
+        // Find the newly created outbox mailbox (using getMailboxes command on /jmap endpoint)
+        List<Map<String, String>> mailboxes = with()
+                .accept(ContentType.JSON)
+                .contentType(ContentType.JSON)
+                .header("Authorization", accessToken.serialize())
+                .body("[[\"getMailboxes\", {\"properties\": [\"role\", \"id\"]}, \"#0\"]]")
+                .post("/jmap")
+                .andReturn()
+                .body()
+                .jsonPath()
+                .getList(ARGUMENTS + ".list");
+
+        outboxId = mailboxes.stream()
+                .filter(x -> x.get("role").equals("outbox"))
+                .map(x -> x.get("id"))
+                .findFirst().get();
     }
 
     @Test
@@ -632,8 +650,6 @@ public abstract class SetMessagesMethodTest {
         jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "outbox");
         embeddedElasticSearch.awaitForElasticSearch();
 
-        String outboxId = getOutboxId();
-
         String messageCreationId = "user|inbox|1";
         String requestBody = "[" +
                 "  [" +
@@ -662,14 +678,19 @@ public abstract class SetMessagesMethodTest {
                 .log().ifValidationFails()
                 .statusCode(200)
                 .body(NAME, equalTo("messagesSet"))
-                .body(ARGUMENTS + ".created", aMapWithSize(1))
                 .body(ARGUMENTS + ".notCreated", aMapWithSize(0))
+                // note that assertions on result message had to be split between
+                // string-typed values and boolean-typed value assertions on the same .created entry
+                // make sure only one creation has been processed
+                .body(ARGUMENTS + ".created", aMapWithSize(1))
+                // assert server-set attributes are returned
                 .body(ARGUMENTS + ".created", hasEntry(equalTo(messageCreationId), Matchers.allOf(
                         hasEntry(equalTo("id"), not(isEmptyOrNullString())),
                         hasEntry(equalTo("blobId"), not(isEmptyOrNullString())),
                         hasEntry(equalTo("threadId"), not(isEmptyOrNullString())),
                         hasEntry(equalTo("size"), not(isEmptyOrNullString()))
                 )))
+                // assert that message flags are all unset
                 .body(ARGUMENTS + ".created", hasEntry(equalTo(messageCreationId), Matchers.allOf(
                         hasEntry(equalTo("isDraft"), equalTo(false)),
                         hasEntry(equalTo("isUnread"), equalTo(false)),
@@ -679,32 +700,12 @@ public abstract class SetMessagesMethodTest {
                 ;
     }
 
-    private String getOutboxId() {
-        // Find the newly created outbox mailbox (using getMailboxes command on /jmap endpoint)
-        List<Map<String, String>> mailboxes = with()
-                .accept(ContentType.JSON)
-                .contentType(ContentType.JSON)
-                .header("Authorization", accessToken.serialize())
-                .body("[[\"getMailboxes\", {\"properties\": [\"role\", \"id\"]}, \"#0\"]]")
-                .post("/jmap")
-                .andReturn()
-                .body()
-                .jsonPath()
-                .getList(ARGUMENTS + ".list");
-
-        return mailboxes.stream()
-                .filter(x -> x.get("role").equals("outbox"))
-                .map(x -> x.get("id"))
-                .findFirst().get();
-    }
-
     @Test
     public void setMessagesShouldCreateMessageInOutboxWhenSendingMessage() throws MailboxException {
         // Given
         jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "outbox");
         embeddedElasticSearch.awaitForElasticSearch();
 
-        String outboxId = getOutboxId();
         String messageCreationId = "user|inbox|1";
         String presumedMessageId = "username@domain.tld|outbox|1";
         String messageSubject = "Thank you for joining example.com!";
@@ -713,7 +714,7 @@ public abstract class SetMessagesMethodTest {
                 "    \"setMessages\","+
                 "    {" +
                 "      \"create\": { \"" + messageCreationId  + "\" : {" +
-                "        \"from\": { \"name\": \"MAILER-DEAMON\", \"email\": \"postmaster@example.com\"}," +
+                "        \"from\": { \"name\": \"MAILER-DAEMON\", \"email\": \"postmaster@example.com\"}," +
                 "        \"to\": [{ \"name\": \"BOB\", \"email\": \"someone@example.com\"}]," +
                 "        \"subject\": \"" + messageSubject + "\"," +
                 "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
