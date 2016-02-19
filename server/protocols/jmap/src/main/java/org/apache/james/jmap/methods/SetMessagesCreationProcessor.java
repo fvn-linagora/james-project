@@ -86,11 +86,9 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
             LOGGER.error("Unable to find a mailbox with role 'outbox'!");
             throw Throwables.propagate(e);
         }
-        Function<Long, MessageId> buildMessageIdFromUid = buildMessageIdFunc(mailboxSession, outbox);
-
         return request.getCreate().entrySet().stream()
                 .map(e -> new MessageWithId.CreationMessageEntry(e.getKey(), e.getValue()))
-                .map(nuMsg -> createMessageInOutbox(nuMsg, mailboxSession, outbox, buildMessageIdFromUid))
+                .map(nuMsg -> createMessageInOutbox(nuMsg, mailboxSession, outbox, buildMessageIdFunc(mailboxSession, outbox)))
                 .reduce(SetMessagesResponse.builder(),
                         (builder, msg) -> builder.created(ImmutableMap.of(msg.creationId, msg.message)),
                         (builder1, builder2) -> builder1.created(builder2.build().getCreated()))
@@ -104,11 +102,8 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
         try {
             MessageMapper<Id> messageMapper = mailboxSessionMapperFactory.createMessageMapper(session);
             MailboxMessage<Id> newMailboxMessage = buildMailboxMessage(createdEntry, outbox);
-
             messageMapper.add(outbox, newMailboxMessage);
-
             return new MessageWithId<>(createdEntry.creationId, Message.fromMailboxMessage(newMailboxMessage, buildMessageIdFromUid));
-
         } catch (MailboxException e) {
             throw Throwables.propagate(e);
         } catch (MailboxRoleNotFoundException e) {
