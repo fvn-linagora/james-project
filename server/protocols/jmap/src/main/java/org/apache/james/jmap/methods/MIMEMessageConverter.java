@@ -23,6 +23,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Date;
 import java.util.TimeZone;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -46,6 +47,7 @@ import org.apache.james.mime4j.message.BodyFactory;
 import org.apache.james.mime4j.message.DefaultMessageBuilder;
 import org.apache.james.mime4j.message.DefaultMessageWriter;
 import org.apache.james.mime4j.message.HeaderImpl;
+import org.apache.james.mime4j.stream.Field;
 import org.apache.james.mime4j.stream.RawField;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -56,13 +58,10 @@ public class MIMEMessageConverter {
     private final MessageBuilder messageBuilder;
     private final BodyFactory bodyFactory;
 
-    @Inject
-    @VisibleForTesting MIMEMessageConverter(MessageBuilder messageBuilder, BodyFactory bodyFactory) {
-        this.messageBuilder = messageBuilder;
-        this.bodyFactory = bodyFactory;
+    MIMEMessageConverter() {
+        this.messageBuilder = new DefaultMessageBuilder();
+        this.bodyFactory = new BasicBodyFactory();
     }
-
-    MIMEMessageConverter() { this(new DefaultMessageBuilder(), new BasicBodyFactory()); }
 
     public byte[] convert(MessageWithId.CreationMessageEntry creationMessageEntry) {
 
@@ -124,21 +123,23 @@ public class MIMEMessageConverter {
         messageHeaders.addField(Fields.date("Date",
                 Date.from(newMessage.getDate().toInstant()), TimeZone.getTimeZone(newMessage.getDate().getZone())
         ));
-        // deal with InReplyTo header
-        newMessage.getInReplyToMessageId()
-                .ifPresent(msgId -> {
-                    FieldParser<UnstructuredField> parser = UnstructuredFieldImpl.PARSER;
-                    RawField rawField = new RawField("In-Reply-To", msgId);
-                    messageHeaders.addField(parser.parse(rawField, DecodeMonitor.SILENT));
-                });
+        newMessage.getInReplyToMessageId().ifPresent(addInReplyToHeader(messageHeaders::addField));
         return messageHeaders;
+    }
+
+    private Consumer<String> addInReplyToHeader(Consumer<Field> headerAppender) {
+        return msgId -> {
+            FieldParser<UnstructuredField> parser = UnstructuredFieldImpl.PARSER;
+            RawField rawField = new RawField("In-Reply-To", msgId);
+            headerAppender.accept(parser.parse(rawField, DecodeMonitor.SILENT));
+        };
     }
 
     private TextBody createTextBody(CreationMessage newMessage) {
         try {
             return bodyFactory.textBody(
-                    InputStreams.create(newMessage.getTextBody().orElse(""), Charsets.DEFAULT_CHARSET),
-                    Charsets.DEFAULT_CHARSET.name());
+                    InputStreams.create(newMessage.getTextBody().orElse(""), Charsets.UTF_8),
+                    Charsets.UTF_8.name());
         } catch (IOException e) {
             throw Throwables.propagate(e);
         }

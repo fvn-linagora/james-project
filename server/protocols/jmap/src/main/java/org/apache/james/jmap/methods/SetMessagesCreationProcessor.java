@@ -97,6 +97,7 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
                 .build();
     }
 
+    @VisibleForTesting
     protected MessageWithId<Message> createMessageInOutbox(MessageWithId.CreationMessageEntry createdEntry,
                                                            MailboxSession session,
                                                            Mailbox outbox, Function<Long, MessageId> buildMessageIdFromUid) {
@@ -136,6 +137,7 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
                 bodyStartOctet, content, flags, propertyBuilder, mailboxId);
     }
 
+    @VisibleForTesting
     protected Optional<Mailbox> getOutbox(MailboxSession session) throws MailboxException {
         return mailboxManager.search(MailboxQuery.builder(session)
                 .privateUserMailboxes().build(), session).stream()

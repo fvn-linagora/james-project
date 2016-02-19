@@ -40,13 +40,24 @@ import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
-import org.apache.james.mailbox.store.mail.model.impl.SimpleMailbox;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 public class SetMessagesCreationProcessorTest {
+
+    public static final Message FAKEMESSAGE = Message.builder()
+            .id(MessageId.of("user|outbox|1"))
+            .blobId("anything")
+            .threadId("anything")
+            .mailboxIds(ImmutableList.of("mailboxId"))
+            .headers(ImmutableMap.of())
+            .subject("anything")
+            .size(0)
+            .date(ZonedDateTime.now())
+            .preview("anything")
+            .build();
 
     @Test
     public void processShouldReturnEmptyCreatedWhenRequestHasEmptyCreate() {
@@ -87,7 +98,7 @@ public class SetMessagesCreationProcessorTest {
         SetMessagesCreationProcessor sut = new SetMessagesCreationProcessor<MailboxId>(null, null, mockSessionMapperFactory, null) {
             @Override
             protected MessageWithId<Message> createMessageInOutbox(MessageWithId.CreationMessageEntry createdEntry, MailboxSession session, Mailbox outbox, Function<Long, MessageId> buildMessageIdFromUid) {
-                return new MessageWithId<>(createdEntry.creationId, getFakeMessage());
+                return new MessageWithId<>(createdEntry.creationId, FAKEMESSAGE);
             }
             @Override
             protected Optional<Mailbox> getOutbox(MailboxSession session) throws MailboxException {
@@ -112,19 +123,5 @@ public class SetMessagesCreationProcessorTest {
 
         assertThat(result.getCreated()).isNotEmpty();
         assertThat(result.getNotCreated()).isEmpty();
-    }
-
-    private Message getFakeMessage() {
-        return Message.builder()
-                .id(org.apache.james.jmap.model.MessageId.of("user|outbox|1"))
-                .blobId("anything")
-                .threadId("anything")
-                .mailboxIds(ImmutableList.of("mailboxId"))
-                .headers(ImmutableMap.of())
-                .subject("anything")
-                .size(0)
-                .date(ZonedDateTime.now())
-                .preview("anything")
-                .build();
     }
 }

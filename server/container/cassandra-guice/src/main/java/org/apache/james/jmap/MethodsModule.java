@@ -65,9 +65,6 @@ public class MethodsModule extends AbstractModule {
         methods.addBinding().to(new TypeLiteral<SetMessagesMethod<CassandraId>>(){});
         bind(SetMessagesUpdateProcessor.class).to(new TypeLiteral<SetMessagesUpdateProcessor<CassandraId>>(){});
         bind(SetMessagesCreationProcessor.class).to(new TypeLiteral<SetMessagesCreationProcessor<CassandraId>>(){});
-        bind(MessageBuilder.class).to(DefaultMessageBuilder.class);
-        bind(BodyFactory.class).to(BasicBodyFactory.class);
-
     }
 
     @Provides

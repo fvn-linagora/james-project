@@ -98,6 +98,8 @@ public abstract class SetMessagesMethodTest {
         jmapServer.serverProbe().createMailbox("#private", "username", "inbox");
         accessToken = JmapAuthentication.authenticateJamesUser(username, password);
 
+        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "outbox");
+        embeddedElasticSearch.awaitForElasticSearch();
         // Find the newly created outbox mailbox (using getMailboxes command on /jmap endpoint)
         List<Map<String, String>> mailboxes = with()
                 .accept(ContentType.JSON)
@@ -647,9 +649,6 @@ public abstract class SetMessagesMethodTest {
 
     @Test
     public void setMessageShouldReturnCreatedMessageWhenSendingMessage() {
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "outbox");
-        embeddedElasticSearch.awaitForElasticSearch();
-
         String messageCreationId = "user|inbox|1";
         String requestBody = "[" +
                 "  [" +
@@ -703,9 +702,6 @@ public abstract class SetMessagesMethodTest {
     @Test
     public void setMessagesShouldCreateMessageInOutboxWhenSendingMessage() throws MailboxException {
         // Given
-        jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "outbox");
-        embeddedElasticSearch.awaitForElasticSearch();
-
         String messageCreationId = "user|inbox|1";
         String presumedMessageId = "username@domain.tld|outbox|1";
         String messageSubject = "Thank you for joining example.com!";

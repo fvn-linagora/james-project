@@ -81,10 +81,8 @@ public class MIMEMessageConverterTest {
                 "user|mailbox|1", testMessage));
 
         // Then
-        assertThat(result.getFrom()).extracting(Mailbox::getAddress)
-                .allMatch(f -> f.toString().equals(joesEmail));
-        assertThat(result.getSender()).extracting(Mailbox::getAddress)
-                .allMatch(f -> f.toString().equals(joesEmail));
+        assertThat(result.getFrom()).extracting(Mailbox::getAddress).allMatch(f -> f.toString().equals(joesEmail));
+        assertThat(result.getSender().getAddress()).isEqualTo(joesEmail);
     }
 
     @Test
@@ -95,7 +93,6 @@ public class MIMEMessageConverterTest {
         Instant now = Instant.now();
         ZonedDateTime messageDate = ZonedDateTime.ofInstant(now, ZoneId.systemDefault());
 
-        // ZonedDateTime actual = ZonedDateTime.ofInstant(result.getDate().toInstant(), ZoneId.systemDefault());
         CreationMessage testMessage = CreationMessage.builder()
                 .mailboxIds(ImmutableList.of("Hey!"))
                 .subject("subject")
