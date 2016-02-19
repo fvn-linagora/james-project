@@ -31,14 +31,11 @@ import org.apache.james.jmap.methods.JmapResponseWriter;
 import org.apache.james.jmap.methods.JmapResponseWriterImpl;
 import org.apache.james.jmap.methods.Method;
 import org.apache.james.jmap.methods.SetMessagesCreationProcessor;
+import org.apache.james.jmap.methods.SetMessagesDestructionProcessor;
 import org.apache.james.jmap.methods.SetMessagesMethod;
 import org.apache.james.jmap.methods.SetMessagesProcessor;
 import org.apache.james.jmap.methods.SetMessagesUpdateProcessor;
 import org.apache.james.mailbox.cassandra.CassandraId;
-import org.apache.james.mime4j.dom.MessageBuilder;
-import org.apache.james.mime4j.message.BasicBodyFactory;
-import org.apache.james.mime4j.message.BodyFactory;
-import org.apache.james.mime4j.message.DefaultMessageBuilder;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
@@ -70,9 +67,10 @@ public class MethodsModule extends AbstractModule {
     @Provides
     public List<SetMessagesProcessor<CassandraId>> setMessagesProcessors(
             SetMessagesUpdateProcessor<CassandraId> messageUpdater,
-            SetMessagesCreationProcessor<CassandraId> messageCreator) {
+            SetMessagesCreationProcessor<CassandraId> messageCreator,
+            SetMessagesDestructionProcessor<CassandraId> messageDestroyer) {
 
-        return ImmutableList.of( messageUpdater, messageCreator);
+        return ImmutableList.of( messageUpdater, messageCreator, messageDestroyer);
     }
 
 }
