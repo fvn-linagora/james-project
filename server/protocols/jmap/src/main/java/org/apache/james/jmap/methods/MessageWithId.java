@@ -21,9 +21,9 @@ package org.apache.james.jmap.methods;
 
 import org.apache.james.jmap.model.CreationMessage;
 
-class MessageWithId<T> {
-    String creationId;
-    T message;
+public class MessageWithId<T> {
+    public String creationId;
+    public T message;
 
     public MessageWithId(String creationId, T message) {
         this.creationId = creationId;

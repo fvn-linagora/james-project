@@ -23,7 +23,7 @@ import org.apache.james.jmap.model.mailbox.Role;
 
 public class MailboxRoleNotFoundException extends RuntimeException {
 
-    final Role role;
+    private final Role role;
 
     public MailboxRoleNotFoundException(Role role) {
         super(String.format("Could not find any mailbox with role '%s'", role.serialize()));
