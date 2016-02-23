@@ -20,9 +20,11 @@ package org.apache.james.jmap.model;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 
 import com.google.common.base.Strings;
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.james.jmap.methods.MessageWithId;
 import org.apache.james.jmap.methods.Method;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -41,6 +43,14 @@ public class SetMessagesResponse implements Method.Response {
 
     @JsonPOJOBuilder(withPrefix = "")
     public static class Builder {
+
+        public static Builder accumulator(Builder accumulator, SetMessagesResponse response) {
+            return response.mergeInto(accumulator);
+        }
+
+        public static Builder combiner(Builder firstBuilder, Builder secondBuilder) {
+            return secondBuilder.build().mergeInto(firstBuilder);
+        }
 
         private String accountId;
         private String oldState;

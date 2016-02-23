@@ -89,9 +89,8 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
         return request.getCreate().entrySet().stream()
                 .map(e -> new MessageWithId.CreationMessageEntry(e.getKey(), e.getValue()))
                 .map(nuMsg -> createMessageInOutbox(nuMsg, mailboxSession, outbox, buildMessageIdFunc(mailboxSession, outbox)))
-                .reduce(SetMessagesResponse.builder(),
-                        (builder, msg) -> builder.created(ImmutableMap.of(msg.creationId, msg.message)),
-                        (builder1, builder2) -> builder1.created(builder2.build().getCreated()))
+                .map(msg -> SetMessagesResponse.builder().created(ImmutableMap.of(msg.creationId, msg.message)).build())
+                .reduce(SetMessagesResponse.builder(), SetMessagesResponse.Builder::accumulator, SetMessagesResponse.Builder::combiner)
                 .build();
     }
 
