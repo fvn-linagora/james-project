@@ -19,7 +19,7 @@
 
 package org.apache.james.jmap.methods;
 
-import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import javax.inject.Inject;
@@ -39,10 +39,10 @@ public class SetMessagesMethod<Id extends MailboxId> implements Method {
     private static final Method.Request.Name METHOD_NAME = Method.Request.name("setMessages");
     private static final Method.Response.Name RESPONSE_NAME = Method.Response.name("messagesSet");
 
-    private final List<SetMessagesProcessor<Id>> messagesProcessors;
+    private final Set<SetMessagesProcessor> messagesProcessors;
 
     @Inject
-    @VisibleForTesting SetMessagesMethod(List<SetMessagesProcessor<Id>> messagesProcessors) {
+    @VisibleForTesting SetMessagesMethod(Set<SetMessagesProcessor> messagesProcessors) {
         this.messagesProcessors = messagesProcessors;
     }
 

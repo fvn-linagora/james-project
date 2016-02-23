@@ -70,7 +70,7 @@ public class SetMessagesDestructionProcessor<Id extends MailboxId> implements Se
         }
         return request.getDestroy().stream()
                 .map(delete(messageMapper, mailboxSession))
-                .reduce(SetMessagesResponse.builder(), (builder, resp) -> resp.mergeInto(builder), (b1, b2) -> b2.build().mergeInto(b1))
+                .reduce(SetMessagesResponse.builder(),  SetMessagesResponse.Builder::accumulator, SetMessagesResponse.Builder::combiner)
                 .build();
     }
 
