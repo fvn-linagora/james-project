@@ -25,6 +25,7 @@ import static com.jayway.restassured.config.EncoderConfig.encoderConfig;
 import static com.jayway.restassured.config.RestAssuredConfig.newConfig;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.hasKey;
@@ -742,5 +743,43 @@ public abstract class SetMessagesMethodTest {
                 .body(ARGUMENTS + ".list", hasSize(1))
                 .body(ARGUMENTS + ".list[0].subject", equalTo(messageSubject))
                 .log().ifValidationFails();
+    }
+
+    @Test
+    public void setMessagesShouldRejectWhenSendingMessageHasNoValidAddress() {
+        String messageCreationId = "user|inbox|1";
+        String requestBody = "[" +
+                "  [" +
+                "    \"setMessages\","+
+                "    {" +
+                "      \"create\": { \"" + messageCreationId  + "\" : {" +
+                "        \"from\": { \"name\": \"MAILER-DEAMON\", \"email\": \"postmaster@example.com\"}," +
+                "        \"to\": [{ \"name\": \"BOB\", \"email\": \"someone@example.com@example.com\"}]," +
+                "        \"cc\": [{ \"name\": \"ALICE\"}]," +
+                "        \"subject\": \"Thank you for joining example.com!\"," +
+                "        \"textBody\": \"Hello someone, and thank you for joining example.com!\"," +
+                "        \"mailboxIds\": [\"" + outboxId + "\"]" +
+                "      }}" +
+                "    }," +
+                "    \"#0\"" +
+                "  ]" +
+                "]";
+
+        given()
+                .accept(ContentType.JSON)
+                .contentType(ContentType.JSON)
+                .header("Authorization", accessToken.serialize())
+                .body(requestBody)
+                .when()
+                .post("/jmap")
+                .then()
+                .log().all()
+                .statusCode(200)
+                .body(NAME, equalTo("messagesSet"))
+
+                .body(ARGUMENTS + ".notCreated", hasKey(messageCreationId))
+                .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].type", equalTo("invalidProperties"))
+                .body(ARGUMENTS + ".notCreated[\""+messageCreationId+"\"].description", endsWith("no recipient address set"))
+                .body(ARGUMENTS + ".created", aMapWithSize(0));
     }
 }

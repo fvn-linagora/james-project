@@ -19,15 +19,20 @@
 
 package org.apache.james.jmap.model;
 
+import static org.apache.james.jmap.model.MessageProperties.MessageProperty;
+
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
-import org.apache.james.jmap.methods.GetMessagesMethod;
-import org.apache.james.jmap.methods.JmapResponseWriterImpl;
+import javax.mail.internet.AddressException;
+import javax.mail.internet.InternetAddress;
 
-import com.fasterxml.jackson.annotation.JsonFilter;
+import org.apache.james.jmap.methods.ValidationResult;
+
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.google.common.annotations.VisibleForTesting;
@@ -38,6 +43,10 @@ import com.google.common.collect.ImmutableMap;
 
 @JsonDeserialize(builder = CreationMessage.Builder.class)
 public class CreationMessage {
+
+    private static final String RECIPIENT_PROPERTY_NAMES = ImmutableList.of(MessageProperty.to, MessageProperty.cc, MessageProperty.bcc).stream()
+            .map(MessageProperty::asFieldName)
+            .collect(Collectors.joining(", "));
 
     public static Builder builder() {
         return new Builder();
@@ -52,11 +61,11 @@ public class CreationMessage {
         private boolean isAnswered;
         private boolean isDraft;
         private final ImmutableMap.Builder<String, String> headers;
-        private Emailer from;
-        private final ImmutableList.Builder<Emailer> to;
-        private final ImmutableList.Builder<Emailer> cc;
-        private final ImmutableList.Builder<Emailer> bcc;
-        private final ImmutableList.Builder<Emailer> replyTo;
+        private ContactAddress from;
+        private final ImmutableList.Builder<ContactAddress> to;
+        private final ImmutableList.Builder<ContactAddress> cc;
+        private final ImmutableList.Builder<ContactAddress> bcc;
+        private final ImmutableList.Builder<ContactAddress> replyTo;
         private String subject;
         private ZonedDateTime date;
         private String textBody;
@@ -109,27 +118,27 @@ public class CreationMessage {
             return this;
         }
 
-        public Builder from(Emailer from) {
+        public Builder from(ContactAddress from) {
             this.from = from;
             return this;
         }
 
-        public Builder to(List<Emailer> to) {
+        public Builder to(List<ContactAddress> to) {
             this.to.addAll(to);
             return this;
         }
 
-        public Builder cc(List<Emailer> cc) {
+        public Builder cc(List<ContactAddress> cc) {
             this.cc.addAll(cc);
             return this;
         }
 
-        public Builder bcc(List<Emailer> bcc) {
+        public Builder bcc(List<ContactAddress> bcc) {
             this.bcc.addAll(bcc);
             return this;
         }
 
-        public Builder replyTo(List<Emailer> replyTo) {
+        public Builder replyTo(List<ContactAddress> replyTo) {
             this.replyTo.addAll(replyTo);
             return this;
         }
@@ -173,7 +182,7 @@ public class CreationMessage {
         public CreationMessage build() {
             Preconditions.checkState(mailboxIds != null, "'mailboxIds' is mandatory");
             Preconditions.checkState(headers != null, "'headers' is mandatory");
-            Preconditions.checkState(!Strings.isNullOrEmpty(subject), "'subject' is mandatory");
+            Preconditions.checkState(from != null, "'from' address is mandatory");
             ImmutableList<Attachment> attachments = this.attachments.build();
             ImmutableMap<String, SubMessage> attachedMessages = this.attachedMessages.build();
             Preconditions.checkState(areAttachedMessagesKeysInAttachments(attachments, attachedMessages), "'attachedMessages' keys must be in 'attachments'");
@@ -194,11 +203,11 @@ public class CreationMessage {
     private final boolean isAnswered;
     private final boolean isDraft;
     private final ImmutableMap<String, String> headers;
-    private final Optional<Emailer> from;
-    private final ImmutableList<Emailer> to;
-    private final ImmutableList<Emailer> cc;
-    private final ImmutableList<Emailer> bcc;
-    private final ImmutableList<Emailer> replyTo;
+    private final Optional<ContactAddress> from;
+    private final ImmutableList<ContactAddress> to;
+    private final ImmutableList<ContactAddress> cc;
+    private final ImmutableList<ContactAddress> bcc;
+    private final ImmutableList<ContactAddress> replyTo;
     private final String subject;
     private final ZonedDateTime date;
     private final Optional<String> textBody;
@@ -207,8 +216,8 @@ public class CreationMessage {
     private final ImmutableMap<String, SubMessage> attachedMessages;
 
     @VisibleForTesting
-    CreationMessage(ImmutableList<String> mailboxIds, Optional<String> inReplyToMessageId, boolean isUnread, boolean isFlagged, boolean isAnswered, boolean isDraft, ImmutableMap<String, String> headers, Optional<Emailer> from,
-                    ImmutableList<Emailer> to, ImmutableList<Emailer> cc, ImmutableList<Emailer> bcc, ImmutableList<Emailer> replyTo, String subject, ZonedDateTime date, Optional<String> textBody, Optional<String> htmlBody, ImmutableList<Attachment> attachments,
+    CreationMessage(ImmutableList<String> mailboxIds, Optional<String> inReplyToMessageId, boolean isUnread, boolean isFlagged, boolean isAnswered, boolean isDraft, ImmutableMap<String, String> headers, Optional<ContactAddress> from,
+                    ImmutableList<ContactAddress> to, ImmutableList<ContactAddress> cc, ImmutableList<ContactAddress> bcc, ImmutableList<ContactAddress> replyTo, String subject, ZonedDateTime date, Optional<String> textBody, Optional<String> htmlBody, ImmutableList<Attachment> attachments,
                     ImmutableMap<String, SubMessage> attachedMessages) {
         this.mailboxIds = mailboxIds;
         this.inReplyToMessageId = inReplyToMessageId;
@@ -258,23 +267,23 @@ public class CreationMessage {
         return headers;
     }
 
-    public Optional<Emailer> getFrom() {
+    public Optional<ContactAddress> getFrom() {
         return from;
     }
 
-    public ImmutableList<Emailer> getTo() {
+    public ImmutableList<ContactAddress> getTo() {
         return to;
     }
 
-    public ImmutableList<Emailer> getCc() {
+    public ImmutableList<ContactAddress> getCc() {
         return cc;
     }
 
-    public ImmutableList<Emailer> getBcc() {
+    public ImmutableList<ContactAddress> getBcc() {
         return bcc;
     }
 
-    public ImmutableList<Emailer> getReplyTo() {
+    public ImmutableList<ContactAddress> getReplyTo() {
         return replyTo;
     }
 
@@ -302,4 +311,111 @@ public class CreationMessage {
         return attachedMessages;
     }
 
+    public boolean isValid() {
+        return validate().isEmpty();
+    }
+
+    public List<ValidationResult> validate() {
+        ImmutableList.Builder<ValidationResult> errors = ImmutableList.<ValidationResult>builder();
+        // sender
+        from.filter(f -> !f.hasValidEmail()).ifPresent(f -> errors.add(ValidationResult.builder()
+                    .property(MessageProperty.from.asFieldName()) .message("'from' address is mandatory").build()));
+        // valid recipients
+        ImmutableList<ContactAddress> recipients = ImmutableList.<ContactAddress>builder().addAll(to).addAll(cc).addAll(bcc).build();
+        boolean hasAtLeastOneAddressToSendTo = recipients.stream().anyMatch(ContactAddress::hasValidEmail);
+        boolean recipientsHaveValidAddresses = recipients.stream().allMatch(e1 -> e1.getEmail() != null);
+        if (!(recipientsHaveValidAddresses && hasAtLeastOneAddressToSendTo)) {
+            errors.add(ValidationResult.builder().message("no recipient address set").property(RECIPIENT_PROPERTY_NAMES).build());
+        }
+        // subject
+        if (Strings.isNullOrEmpty(subject)) {
+            errors.add(ValidationResult.builder().message("'subject' is missing").property(MessageProperty.subject.asFieldName()).build());
+        }
+        return errors.build();
+    }
+
+    @JsonDeserialize(builder = ContactAddress.Builder.class)
+    public static class ContactAddress {
+
+        public static Builder builder() {
+            return new Builder();
+        }
+
+        @JsonPOJOBuilder(withPrefix = "")
+        public static class Builder {
+            private String name;
+            private Optional<String> email = Optional.empty();
+
+            public Builder name(String name) {
+                this.name = name;
+                return this;
+            }
+
+            public Builder email(String email) {
+                this.email = Optional.of(email);
+                return this;
+            }
+
+            public ContactAddress build() {
+                Preconditions.checkState(!Strings.isNullOrEmpty(name), "'name' is mandatory");
+                return new ContactAddress(name, email);
+            }
+        }
+
+        private final String name;
+        private final Optional<String> email;
+
+        @VisibleForTesting
+        ContactAddress(String name, Optional<String> email) {
+            this.name = name;
+            this.email = email;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public Optional<String> getEmail() {
+            return email;
+        }
+
+        public boolean hasValidEmail() {
+            return isValidEmailAddress(getEmail().orElse("invalid email"));
+        }
+
+        private static boolean isValidEmailAddress(String email) {
+            boolean result = true;
+            try {
+                InternetAddress emailAddress = new InternetAddress(email);
+                // verrrry permissive validator !
+                emailAddress.validate();
+            } catch (AddressException ex) {
+                result = false;
+            }
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o instanceof ContactAddress) {
+                ContactAddress otherEMailer = (ContactAddress) o;
+                return Objects.equals(name, otherEMailer.name)
+                        && Objects.equals(email.orElse("<unset>"), otherEMailer.email.orElse("<unset>") );
+            }
+            return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(name, email);
+        }
+
+        @Override
+        public String toString() {
+            return com.google.common.base.Objects.toStringHelper(this)
+                    .add("name", name)
+                    .add("email", email.orElse("<unset>"))
+                    .toString();
+        }
+    }
 }

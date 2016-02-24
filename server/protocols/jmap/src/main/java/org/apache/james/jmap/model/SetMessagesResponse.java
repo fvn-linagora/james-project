@@ -58,7 +58,7 @@ public class SetMessagesResponse implements Method.Response {
         private ImmutableMap.Builder<String, Message> created;
         private ImmutableList.Builder<MessageId> updated;
         private ImmutableList.Builder<MessageId> destroyed;
-        private ImmutableMap.Builder<MessageId, SetError> notCreated;
+        private ImmutableMap.Builder<String, SetError> notCreated;
         private ImmutableMap.Builder<MessageId, SetError> notUpdated;
         private ImmutableMap.Builder<MessageId, SetError> notDestroyed;
 
@@ -103,7 +103,7 @@ public class SetMessagesResponse implements Method.Response {
             return this;
         }
 
-        public Builder notCreated(Map<MessageId, SetError> notCreated) {
+        public Builder notCreated(Map<String, SetError> notCreated) {
             this.notCreated.putAll(notCreated);
             return this;
         }
@@ -135,12 +135,12 @@ public class SetMessagesResponse implements Method.Response {
     private final Map<String, Message> created;
     private final List<MessageId> updated;
     private final List<MessageId> destroyed;
-    private final Map<MessageId, SetError> notCreated;
+    private final Map<String, SetError> notCreated;
     private final Map<MessageId, SetError> notUpdated;
     private final Map<MessageId, SetError> notDestroyed;
 
     @VisibleForTesting SetMessagesResponse(String accountId, String oldState, String newState, Map<String, Message> created, List<MessageId> updated, List<MessageId> destroyed,
-            Map<MessageId, SetError> notCreated, Map<MessageId, SetError> notUpdated, Map<MessageId, SetError> notDestroyed) {
+            Map<String, SetError> notCreated, Map<MessageId, SetError> notUpdated, Map<MessageId, SetError> notDestroyed) {
         this.accountId = accountId;
         this.oldState = oldState;
         this.newState = newState;
@@ -183,7 +183,7 @@ public class SetMessagesResponse implements Method.Response {
     }
 
     @JsonSerialize
-    public Map<MessageId, SetError> getNotCreated() {
+    public Map<String, SetError> getNotCreated() {
         return notCreated;
     }
 

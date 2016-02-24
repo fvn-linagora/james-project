@@ -19,9 +19,15 @@
 
 package org.apache.james.jmap.methods;
 
+import java.util.AbstractMap;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.mail.Flags;
@@ -32,6 +38,8 @@ import org.apache.james.jmap.exceptions.MailboxRoleNotFoundException;
 import org.apache.james.jmap.model.CreationMessage;
 import org.apache.james.jmap.model.Message;
 import org.apache.james.jmap.model.MessageId;
+import org.apache.james.jmap.model.MessageProperties;
+import org.apache.james.jmap.model.SetError;
 import org.apache.james.jmap.model.SetMessagesRequest;
 import org.apache.james.jmap.model.SetMessagesResponse;
 import org.apache.james.jmap.model.mailbox.Role;
@@ -86,11 +94,39 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
             LOGGER.error("Unable to find a mailbox with role 'outbox'!");
             throw Throwables.propagate(e);
         }
+
+        // handle errors
+        SetMessagesResponse.Builder responseBuilder = SetMessagesResponse.builder()
+                .notCreated(handleCreationErrors(request));
+
         return request.getCreate().entrySet().stream()
                 .map(e -> new MessageWithId.CreationMessageEntry(e.getKey(), e.getValue()))
+                .filter(e -> e.getMessage().isValid())
                 .map(nuMsg -> createMessageInOutbox(nuMsg, mailboxSession, outbox, buildMessageIdFunc(mailboxSession, outbox)))
                 .map(msg -> SetMessagesResponse.builder().created(ImmutableMap.of(msg.getCreationId(), msg.getMessage())).build())
-                .reduce(SetMessagesResponse.builder(), SetMessagesResponse.Builder::accumulator, SetMessagesResponse.Builder::combiner)
+                .reduce(responseBuilder, SetMessagesResponse.Builder::accumulator, SetMessagesResponse.Builder::combiner)
+                .build();
+    }
+
+    private Map<String, SetError> handleCreationErrors(SetMessagesRequest request) {
+        return request.getCreate().entrySet().stream()
+                .filter(e1 -> !e1.getValue().isValid())
+                .map(e1 -> new AbstractMap.SimpleEntry<>(e1.getKey(), buildSetErrorFromValidationResult(e1.getValue().validate())))
+                .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
+    }
+
+    private SetError buildSetErrorFromValidationResult(List<ValidationResult> validationErrors) {
+        String formattedValidationErrorMessage = validationErrors.stream()
+                .map(err -> err.getProperty() + ": " + err.getErrorMessage())
+                .collect(Collectors.joining("\\n"));
+        Set<MessageProperties.MessageProperty> properties = validationErrors.stream()
+                .flatMap(err -> Arrays.stream(err.getProperty().split(",")).filter(p -> p != null)
+                        .flatMap(p -> MessageProperties.MessageProperty.find(p.trim())))
+                .collect(Collectors.toSet());
+        return SetError.builder()
+                .type("invalidProperties")
+                .properties(properties)
+                .description(formattedValidationErrorMessage)
                 .build();
     }
 
