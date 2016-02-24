@@ -71,7 +71,7 @@ public class MIMEMessageConverterTest {
 
         String joesEmail = "joe@example.com";
         CreationMessage testMessage = CreationMessage.builder()
-                .mailboxIds(ImmutableList.of("Hey!"))
+                .mailboxIds(ImmutableList.of("deadbeef-dead-beef-dead-beef"))
                 .subject("subject")
                 .from(Emailer.builder().email(joesEmail).name("joe").build())
                 .build();
@@ -94,7 +94,7 @@ public class MIMEMessageConverterTest {
         ZonedDateTime messageDate = ZonedDateTime.ofInstant(now, ZoneId.systemDefault());
 
         CreationMessage testMessage = CreationMessage.builder()
-                .mailboxIds(ImmutableList.of("Hey!"))
+                .mailboxIds(ImmutableList.of("dead-bada55"))
                 .subject("subject")
                 .date(messageDate)
                 .build();

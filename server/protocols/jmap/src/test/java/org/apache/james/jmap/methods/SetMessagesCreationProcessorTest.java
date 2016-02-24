@@ -96,7 +96,7 @@ public class SetMessagesCreationProcessorTest {
     @SuppressWarnings("unchecked")
     public void processShouldReturnNonEmptyCreatedWhenRequestHasNonEmptyCreate() throws MailboxException {
         // Given
-		MessageMapper<MailboxId> stubMapper = mock(MessageMapper.class);
+        MessageMapper<MailboxId> stubMapper = mock(MessageMapper.class);
         MailboxSessionMapperFactory<MailboxId> mockSessionMapperFactory = mock(MailboxSessionMapperFactory.class);
         when(mockSessionMapperFactory.createMessageMapper(any(MailboxSession.class)))
                 .thenReturn(stubMapper);
@@ -104,11 +104,11 @@ public class SetMessagesCreationProcessorTest {
         SetMessagesCreationProcessor<MailboxId> sut = new SetMessagesCreationProcessor<MailboxId>(null, null, mockSessionMapperFactory, null) {
             @Override
             protected MessageWithId<Message> createMessageInOutbox(MessageWithId.CreationMessageEntry createdEntry, MailboxSession session, Mailbox<MailboxId> outbox, Function<Long, MessageId> buildMessageIdFromUid) {
-                return new MessageWithId<>(createdEntry.creationId, FAKE_MESSAGE);
+                return new MessageWithId<>(createdEntry.getCreationId(), FAKE_MESSAGE);
             }
             @Override
             protected Optional<Mailbox<MailboxId>> getOutbox(MailboxSession session) throws MailboxException {
-            	Mailbox<MailboxId> fakeOutbox = mock(Mailbox.class);
+                Mailbox<MailboxId> fakeOutbox = mock(Mailbox.class);
                 when(fakeOutbox.getName()).thenReturn("outbox");
                 return Optional.of(fakeOutbox);
             }
