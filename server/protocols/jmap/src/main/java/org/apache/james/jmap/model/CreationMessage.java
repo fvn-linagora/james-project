@@ -37,7 +37,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 @JsonDeserialize(builder = CreationMessage.Builder.class)
-@JsonFilter(JmapResponseWriterImpl.PROPERTIES_FILTER)
 public class CreationMessage {
 
     public static Builder builder() {
@@ -194,7 +193,6 @@ public class CreationMessage {
     private final boolean isFlagged;
     private final boolean isAnswered;
     private final boolean isDraft;
-    @JsonFilter(GetMessagesMethod.HEADERS_FILTER)
     private final ImmutableMap<String, String> headers;
     private final Optional<Emailer> from;
     private final ImmutableList<Emailer> to;

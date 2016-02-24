@@ -88,7 +88,7 @@ public class SetMessagesCreationProcessorTest {
         MailboxSession stubSession = mock(MailboxSession.class);
         when(stubSession.getPathDelimiter()).thenReturn('.');
         when(stubSession.getUser()).thenReturn(stubUser);
-        when(stubSession.getPersonalSpace()).thenReturn("no idea!");
+        when(stubSession.getPersonalSpace()).thenReturn("#private");
         return stubSession;
     }
 

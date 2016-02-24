@@ -89,7 +89,7 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
         return request.getCreate().entrySet().stream()
                 .map(e -> new MessageWithId.CreationMessageEntry(e.getKey(), e.getValue()))
                 .map(nuMsg -> createMessageInOutbox(nuMsg, mailboxSession, outbox, buildMessageIdFunc(mailboxSession, outbox)))
-                .map(msg -> SetMessagesResponse.builder().created(ImmutableMap.of(msg.creationId, msg.message)).build())
+                .map(msg -> SetMessagesResponse.builder().created(ImmutableMap.of(msg.getCreationId(), msg.getMessage())).build())
                 .reduce(SetMessagesResponse.builder(), SetMessagesResponse.Builder::accumulator, SetMessagesResponse.Builder::combiner)
                 .build();
     }
@@ -102,7 +102,7 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
             MessageMapper<Id> messageMapper = mailboxSessionMapperFactory.createMessageMapper(session);
             MailboxMessage<Id> newMailboxMessage = buildMailboxMessage(createdEntry, outbox);
             messageMapper.add(outbox, newMailboxMessage);
-            return new MessageWithId<>(createdEntry.creationId, Message.fromMailboxMessage(newMailboxMessage, buildMessageIdFromUid));
+            return new MessageWithId<>(createdEntry.getCreationId(), Message.fromMailboxMessage(newMailboxMessage, buildMessageIdFromUid));
         } catch (MailboxException e) {
             throw Throwables.propagate(e);
         } catch (MailboxRoleNotFoundException e) {
@@ -122,12 +122,12 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
         long size = messageContent.length;
         int bodyStartOctet = 0;
 
-        Flags flags = getMessageFlags(createdEntry.message);
+        Flags flags = getMessageFlags(createdEntry.getMessage());
         PropertyBuilder propertyBuilder = buildPropertyBuilder();
-        Id mailboxId = (Id) outbox.getMailboxId();
-        Date internalDate = Date.from(createdEntry.message.getDate().toInstant());
+        Id mailboxId = outbox.getMailboxId();
+        Date internalDate = Date.from(createdEntry.getMessage().getDate().toInstant());
 
-        return new SimpleMailboxMessage<Id>(internalDate, size,
+        return new SimpleMailboxMessage<>(internalDate, size,
                 bodyStartOctet, content, flags, propertyBuilder, mailboxId);
     }
 

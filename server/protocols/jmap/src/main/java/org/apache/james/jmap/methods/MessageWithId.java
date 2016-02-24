@@ -22,15 +22,24 @@ package org.apache.james.jmap.methods;
 import org.apache.james.jmap.model.CreationMessage;
 
 public class MessageWithId<T> {
-    public String creationId;
-    public T message;
+
+    private String creationId;
+    private T message;
 
     public MessageWithId(String creationId, T message) {
         this.creationId = creationId;
         this.message = message;
     }
 
-    static class CreationMessageEntry extends MessageWithId<CreationMessage> {
+    public String getCreationId() {
+        return creationId;
+    }
+
+    public T getMessage() {
+        return message;
+    }
+
+    public static class CreationMessageEntry extends MessageWithId<CreationMessage> {
         public CreationMessageEntry(String creationId, CreationMessage message) {
             super(creationId, message);
         }

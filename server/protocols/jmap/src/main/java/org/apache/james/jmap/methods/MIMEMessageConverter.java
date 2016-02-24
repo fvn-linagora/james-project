@@ -26,8 +26,6 @@ import java.util.TimeZone;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import javax.inject.Inject;
-
 import org.apache.james.jmap.model.CreationMessage;
 import org.apache.james.jmap.model.Emailer;
 import org.apache.james.mime4j.Charsets;
@@ -58,7 +56,7 @@ public class MIMEMessageConverter {
     private final MessageBuilder messageBuilder;
     private final BodyFactory bodyFactory;
 
-    MIMEMessageConverter() {
+    public MIMEMessageConverter() {
         this.messageBuilder = new DefaultMessageBuilder();
         this.bodyFactory = new BasicBodyFactory();
     }
@@ -76,13 +74,13 @@ public class MIMEMessageConverter {
     }
 
     @VisibleForTesting Message convertToMime(MessageWithId.CreationMessageEntry creationMessageEntry) {
-        if (creationMessageEntry == null || creationMessageEntry.message == null) {
+        if (creationMessageEntry == null || creationMessageEntry.getMessage() == null) {
             throw new IllegalArgumentException("creationMessageEntry is either null or has null message");
         }
 
         Message message = messageBuilder.newMessage();
-        message.setBody(createTextBody(creationMessageEntry.message));
-        message.setHeader(buildMimeHeaders(creationMessageEntry.creationId, creationMessageEntry.message));
+        message.setBody(createTextBody(creationMessageEntry.getMessage()));
+        message.setHeader(buildMimeHeaders(creationMessageEntry.getCreationId(), creationMessageEntry.getMessage()));
         return message;
     }
 
@@ -146,8 +144,7 @@ public class MIMEMessageConverter {
     }
 
     private Mailbox convertEmailToMimeHeader(Emailer address) {
-        String[] splittedAddress = address.getEmail().split("@", 2);
-        return new org.apache.james.mime4j.dom.address.Mailbox(address.getName(), null,
-                splittedAddress[0], splittedAddress[1]);
+        String[] splitAddress = address.getEmail().split("@", 2);
+        return new Mailbox(address.getName(), null, splitAddress[0], splitAddress[1]);
     }
 }
