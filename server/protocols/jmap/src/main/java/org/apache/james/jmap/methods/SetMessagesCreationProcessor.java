@@ -36,6 +36,7 @@ import javax.mail.util.SharedByteArrayInputStream;
 
 import org.apache.james.jmap.exceptions.MailboxRoleNotFoundException;
 import org.apache.james.jmap.model.CreationMessage;
+import org.apache.james.jmap.model.CreationMessageId;
 import org.apache.james.jmap.model.Message;
 import org.apache.james.jmap.model.MessageId;
 import org.apache.james.jmap.model.MessageProperties;
@@ -108,7 +109,7 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
                 .build();
     }
 
-    private Map<String, SetError> handleCreationErrors(SetMessagesRequest request) {
+    private Map<CreationMessageId, SetError> handleCreationErrors(SetMessagesRequest request) {
         return request.getCreate().entrySet().stream()
                 .filter(e1 -> !e1.getValue().isValid())
                 .map(e1 -> new AbstractMap.SimpleEntry<>(e1.getKey(), buildSetErrorFromValidationResult(e1.getValue().validate())))
