@@ -57,7 +57,7 @@ public class MethodsModule extends AbstractModule {
         methods.addBinding().to(new TypeLiteral<GetMessagesMethod<CassandraId>>(){});
         methods.addBinding().to(new TypeLiteral<SetMessagesMethod<CassandraId>>(){});
 
-        Multibinder<SetMessagesProcessor> setMessagesProcessors = Multibinder.newSetBinder(binder(), SetMessagesProcessor.class);
+        Multibinder<SetMessagesProcessor<CassandraId>> setMessagesProcessors = Multibinder.newSetBinder(binder(), new TypeLiteral<SetMessagesProcessor<CassandraId>>(){});
         setMessagesProcessors.addBinding().to(new TypeLiteral<SetMessagesUpdateProcessor<CassandraId>>(){});
         setMessagesProcessors.addBinding().to(new TypeLiteral<SetMessagesCreationProcessor<CassandraId>>(){});
         setMessagesProcessors.addBinding().to(new TypeLiteral<SetMessagesDestructionProcessor<CassandraId>>(){});

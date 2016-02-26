@@ -39,10 +39,10 @@ public class SetMessagesMethod<Id extends MailboxId> implements Method {
     private static final Method.Request.Name METHOD_NAME = Method.Request.name("setMessages");
     private static final Method.Response.Name RESPONSE_NAME = Method.Response.name("messagesSet");
 
-    private final Set<SetMessagesProcessor> messagesProcessors;
+    private final Set<SetMessagesProcessor<Id>> messagesProcessors;
 
     @Inject
-    @VisibleForTesting SetMessagesMethod(Set<SetMessagesProcessor> messagesProcessors) {
+    @VisibleForTesting SetMessagesMethod(Set<SetMessagesProcessor<Id>> messagesProcessors) {
         this.messagesProcessors = messagesProcessors;
     }
 
