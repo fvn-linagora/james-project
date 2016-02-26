@@ -52,7 +52,7 @@ import com.google.common.collect.ImmutableSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SetMessagesUpdateProcessor<Id extends MailboxId> implements SetMessagesProcessor {
+public class SetMessagesUpdateProcessor<Id extends MailboxId> implements SetMessagesProcessor<Id> {
 
     private static final int LIMIT_BY_ONE = 1;
     private static final Logger LOGGER = LoggerFactory.getLogger(SetMessagesUpdateProcessor.class);
