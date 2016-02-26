@@ -19,6 +19,8 @@
 
 package org.apache.james.jmap.methods;
 
+import static org.apache.james.jmap.model.MessageProperties.MessageProperty;
+
 import java.util.AbstractMap;
 import java.util.Date;
 import java.util.List;
@@ -128,7 +130,7 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
         Splitter propertiesSplitter = Splitter.on(',').trimResults().omitEmptyStrings();
         Set<MessageProperties.MessageProperty> properties = validationErrors.stream()
                 .flatMap(err -> propertiesSplitter.splitToList(err.getProperty()).stream())
-                .flatMap(p -> MessageProperties.MessageProperty.find(p.trim()))
+                .flatMap(MessageProperty::find)
                 .collect(Collectors.toSet());
         return SetError.builder()
                 .type("invalidProperties")
