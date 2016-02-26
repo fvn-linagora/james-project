@@ -357,7 +357,7 @@ public class CreationMessage {
 
         @JsonPOJOBuilder(withPrefix = "")
         public static class Builder {
-            private Optional<String> name;
+            private Optional<String> name = Optional.empty();
             private Optional<String> email = Optional.empty();
 
             public Builder name(String name) {
