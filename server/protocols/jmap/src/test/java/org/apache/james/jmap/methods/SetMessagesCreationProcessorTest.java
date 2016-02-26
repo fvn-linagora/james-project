@@ -19,7 +19,7 @@
 
 package org.apache.james.jmap.methods;
 
-import static org.apache.james.jmap.model.CreationMessage.ContactAddress;
+import static org.apache.james.jmap.model.CreationMessage.DraftEmailer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
@@ -166,8 +166,8 @@ public class SetMessagesCreationProcessorTest {
     private SetMessagesRequest buildFakeCreationRequest() {
         return SetMessagesRequest.builder()
                 .create(ImmutableMap.of(CreationMessageId.of("anything-really"), CreationMessage.builder()
-                    .from(ContactAddress.builder().name("alice").email("alice@example.com").build())
-                    .to(ImmutableList.of(ContactAddress.builder().name("bob").email("bob@example.com").build()))
+                    .from(DraftEmailer.builder().name("alice").email("alice@example.com").build())
+                    .to(ImmutableList.of(DraftEmailer.builder().name("bob").email("bob@example.com").build()))
                     .subject("Hey! ")
                     .mailboxIds(ImmutableList.of("mailboxId"))
                     .build()

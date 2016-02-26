@@ -20,17 +20,15 @@ package org.apache.james.jmap.model;
 
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
 
-import com.google.common.base.Strings;
 import org.apache.commons.lang.NotImplementedException;
-import org.apache.james.jmap.methods.MessageWithId;
 import org.apache.james.jmap.methods.Method;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -55,12 +53,12 @@ public class SetMessagesResponse implements Method.Response {
         private String accountId;
         private String oldState;
         private String newState;
-        private ImmutableMap.Builder<CreationMessageId, Message> created;
-        private ImmutableList.Builder<MessageId> updated;
-        private ImmutableList.Builder<MessageId> destroyed;
-        private ImmutableMap.Builder<CreationMessageId, SetError> notCreated;
-        private ImmutableMap.Builder<MessageId, SetError> notUpdated;
-        private ImmutableMap.Builder<MessageId, SetError> notDestroyed;
+        private final ImmutableMap.Builder<CreationMessageId, Message> created;
+        private final ImmutableList.Builder<MessageId> updated;
+        private final ImmutableList.Builder<MessageId> destroyed;
+        private final ImmutableMap.Builder<CreationMessageId, SetError> notCreated;
+        private final ImmutableMap.Builder<MessageId, SetError> notUpdated;
+        private final ImmutableMap.Builder<MessageId, SetError> notDestroyed;
 
         private Builder() {
             created = ImmutableMap.builder();

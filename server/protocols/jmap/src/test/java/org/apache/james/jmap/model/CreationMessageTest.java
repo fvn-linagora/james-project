@@ -19,10 +19,9 @@
 
 package org.apache.james.jmap.model;
 
-import static org.apache.james.jmap.model.CreationMessage.ContactAddress;
+import static org.apache.james.jmap.model.CreationMessage.DraftEmailer;
 import static org.apache.james.jmap.model.MessageProperties.MessageProperty;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
 
 import org.apache.james.jmap.methods.ValidationResult;
 import org.junit.Before;
@@ -44,15 +43,19 @@ public class CreationMessageTest {
     }
 
     @Test
-    public void builderShouldThrowWhenFromAddressIsMissing() {
-        Throwable thrown = catchThrowable(() -> testedBuilder.build());
+    public void validateShouldReturnErrorWhenFromIsMissing() {
+        CreationMessage sut = testedBuilder.build();
 
-        assertThat(thrown).isInstanceOf(IllegalStateException.class).hasMessage("'from' address is mandatory");
+        assertThat(sut.validate()).contains(ValidationResult.builder()
+                .message("'from' address is mandatory")
+                .property(MessageProperty.from.asFieldName())
+                .build()
+        );
     }
 
     @Test
     public void validateShouldReturnErrorWhenFromIsInvalid() {
-        CreationMessage sut = testedBuilder.from(ContactAddress.builder().name("bob").email("bob@domain.com@example.com").build()).build();
+        CreationMessage sut = testedBuilder.from(DraftEmailer.builder().name("bob").email("bob@domain.com@example.com").build()).build();
 
         assertThat(sut.validate()).contains(ValidationResult.builder()
                 .message("'from' address is mandatory")
@@ -64,7 +67,7 @@ public class CreationMessageTest {
     @Test
     public void validateShouldReturnErrorWhenNoRecipientSet () {
         CreationMessage  sut = testedBuilder
-                .from(ContactAddress.builder().name("bob").email("bob@example.com").build()).build();
+                .from(DraftEmailer.builder().name("bob").email("bob@example.com").build()).build();
 
         assertThat(sut.validate()).extracting(ValidationResult::getErrorMessage).contains("no recipient address set");
     }
@@ -72,10 +75,10 @@ public class CreationMessageTest {
     @Test
     public void validateShouldReturnErrorWhenNoValidRecipientSet () {
         CreationMessage sut = testedBuilder
-                .from(ContactAddress.builder().name("bob").email("bob@example.com").build())
-                .to(ImmutableList.of(ContactAddress.builder().name("riri").email("riri@acme.com@example.com").build()))
-                .cc(ImmutableList.of(ContactAddress.builder().name("fifi").email("fifi@acme.com@example.com").build()))
-                .bcc(ImmutableList.of(ContactAddress.builder().name("loulou").email("loulou@acme.com@example.com").build()))
+                .from(DraftEmailer.builder().name("bob").email("bob@example.com").build())
+                .to(ImmutableList.of(DraftEmailer.builder().name("riri").email("riri@acme.com@example.com").build()))
+                .cc(ImmutableList.of(DraftEmailer.builder().name("fifi").email("fifi@acme.com@example.com").build()))
+                .bcc(ImmutableList.of(DraftEmailer.builder().name("loulou").email("loulou@acme.com@example.com").build()))
                 .build();
 
         assertThat(sut.validate()).extracting(ValidationResult::getErrorMessage).contains("no recipient address set");

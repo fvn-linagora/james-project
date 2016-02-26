@@ -19,7 +19,7 @@
 
 package org.apache.james.jmap.methods;
 
-import static org.apache.james.jmap.model.CreationMessage.ContactAddress;
+import static org.apache.james.jmap.model.CreationMessage.DraftEmailer;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -91,7 +91,7 @@ public class MIMEMessageConverter {
         Header messageHeaders = new HeaderImpl();
 
         // add From: and Sender: headers
-        Optional<Mailbox> fromAddress = newMessage.getFrom().filter(ContactAddress::hasValidEmail).map(this::convertEmailToMimeHeader);
+        Optional<Mailbox> fromAddress = newMessage.getFrom().filter(DraftEmailer::hasValidEmail).map(this::convertEmailToMimeHeader);
         fromAddress.map(Fields::from).ifPresent(messageHeaders::addField);
         fromAddress.map(Fields::sender).ifPresent(messageHeaders::addField);
 
@@ -101,17 +101,17 @@ public class MIMEMessageConverter {
                 .collect(Collectors.toList())));
         // add To: headers
         messageHeaders.addField(Fields.to(newMessage.getTo().stream()
-                .filter(ContactAddress::hasValidEmail)
+                .filter(DraftEmailer::hasValidEmail)
                 .map(this::convertEmailToMimeHeader)
                 .collect(Collectors.toList())));
         // add Cc: headers
         messageHeaders.addField(Fields.cc(newMessage.getCc().stream()
-                .filter(ContactAddress::hasValidEmail)
+                .filter(DraftEmailer::hasValidEmail)
                 .map(this::convertEmailToMimeHeader)
                 .collect(Collectors.toList())));
         // add Bcc: headers
         messageHeaders.addField(Fields.bcc(newMessage.getBcc().stream()
-                .filter(ContactAddress::hasValidEmail)
+                .filter(DraftEmailer::hasValidEmail)
                 .map(this::convertEmailToMimeHeader)
                 .collect(Collectors.toList())));
         // add Subject: header
@@ -146,12 +146,11 @@ public class MIMEMessageConverter {
         }
     }
 
-    private Mailbox convertEmailToMimeHeader(CreationMessage.ContactAddress address) {
-        if (! address.getEmail().isPresent() || ! address.getEmail().get().contains("@")) {
+    private Mailbox convertEmailToMimeHeader(DraftEmailer address) {
+        if (!address.hasValidEmail()) {
             throw new IllegalArgumentException("address");
         }
-
-        String[] splitAddress = address.getEmail().get().split("@", 2);
-        return new Mailbox(address.getName(), null, splitAddress[0], splitAddress[1]);
+        CreationMessage.EmailUserAndDomain emailUserAndDomain = address.getEmailUserAndDomain();
+        return new Mailbox(address.getName().orElse(null), null, emailUserAndDomain.getUser().orElse(null), emailUserAndDomain.getDomain().orElse(null));
     }
 }

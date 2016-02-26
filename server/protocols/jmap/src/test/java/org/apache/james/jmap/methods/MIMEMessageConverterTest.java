@@ -19,7 +19,7 @@
 
 package org.apache.james.jmap.methods;
 
-import static org.apache.james.jmap.model.CreationMessage.ContactAddress;
+import static org.apache.james.jmap.model.CreationMessage.DraftEmailer;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.sql.Date;
@@ -44,7 +44,7 @@ public class MIMEMessageConverterTest {
 
         String matchingMessageId = "unique-message-id";
         CreationMessage messageHavingInReplyTo = CreationMessage.builder()
-                .from(ContactAddress.builder().name("sender").build())
+                .from(DraftEmailer.builder().name("sender").build())
                 .inReplyToMessageId(matchingMessageId)
                 .mailboxIds(ImmutableList.of("dead-beef-1337"))
                 .subject("subject")
@@ -75,7 +75,7 @@ public class MIMEMessageConverterTest {
         CreationMessage testMessage = CreationMessage.builder()
                 .mailboxIds(ImmutableList.of("deadbeef-dead-beef-dead-beef"))
                 .subject("subject")
-                .from(ContactAddress.builder().email(joesEmail).name("joe").build())
+                .from(DraftEmailer.builder().email(joesEmail).name("joe").build())
                 .build();
 
         // When
@@ -98,7 +98,7 @@ public class MIMEMessageConverterTest {
         CreationMessage testMessage = CreationMessage.builder()
                 .mailboxIds(ImmutableList.of("dead-bada55"))
                 .subject("subject")
-                .from(ContactAddress.builder().name("sender").build())
+                .from(DraftEmailer.builder().name("sender").build())
                 .date(messageDate)
                 .build();
 
