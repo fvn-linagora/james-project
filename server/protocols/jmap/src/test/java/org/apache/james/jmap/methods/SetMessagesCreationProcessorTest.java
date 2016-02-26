@@ -41,9 +41,9 @@ import org.apache.james.jmap.model.SetMessagesResponse;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
+import org.apache.james.mailbox.store.TestId;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
-import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
 import org.junit.Test;
 
@@ -66,11 +66,11 @@ public class SetMessagesCreationProcessorTest {
 
     @Test
     public void processShouldReturnEmptyCreatedWhenRequestHasEmptyCreate() {
-        SetMessagesCreationProcessor<MailboxId> sut = new SetMessagesCreationProcessor<MailboxId>(null, null, null, null) {
+        SetMessagesCreationProcessor<TestId> sut = new SetMessagesCreationProcessor<TestId>(null, null, null, null) {
             @Override
-            protected Optional<Mailbox<MailboxId>> getOutbox(MailboxSession session) throws MailboxException {
+            protected Optional<Mailbox<TestId>> getOutbox(MailboxSession session) throws MailboxException {
                 @SuppressWarnings("unchecked")
-				Mailbox<MailboxId> fakeOutbox = (Mailbox<MailboxId>) mock(Mailbox.class);
+				Mailbox<TestId> fakeOutbox = (Mailbox<TestId>) mock(Mailbox.class);
                 when(fakeOutbox.getName()).thenReturn("outbox");
                 return Optional.of(fakeOutbox);
             }
@@ -97,19 +97,19 @@ public class SetMessagesCreationProcessorTest {
     @SuppressWarnings("unchecked")
     public void processShouldReturnNonEmptyCreatedWhenRequestHasNonEmptyCreate() throws MailboxException {
         // Given
-        MessageMapper<MailboxId> stubMapper = mock(MessageMapper.class);
-        MailboxSessionMapperFactory<MailboxId> mockSessionMapperFactory = mock(MailboxSessionMapperFactory.class);
+        MessageMapper<TestId> stubMapper = mock(MessageMapper.class);
+        MailboxSessionMapperFactory<TestId> mockSessionMapperFactory = mock(MailboxSessionMapperFactory.class);
         when(mockSessionMapperFactory.createMessageMapper(any(MailboxSession.class)))
                 .thenReturn(stubMapper);
 
-        SetMessagesCreationProcessor<MailboxId> sut = new SetMessagesCreationProcessor<MailboxId>(null, null, mockSessionMapperFactory, null) {
+        SetMessagesCreationProcessor<TestId> sut = new SetMessagesCreationProcessor<TestId>(null, null, mockSessionMapperFactory, null) {
             @Override
-            protected MessageWithId<Message> createMessageInOutbox(MessageWithId.CreationMessageEntry createdEntry, MailboxSession session, Mailbox<MailboxId> outbox, Function<Long, MessageId> buildMessageIdFromUid) {
+            protected MessageWithId<Message> createMessageInOutbox(MessageWithId.CreationMessageEntry createdEntry, MailboxSession session, Mailbox<TestId> outbox, Function<Long, MessageId> buildMessageIdFromUid) {
                 return new MessageWithId<>(createdEntry.getCreationId(), FAKE_MESSAGE);
             }
             @Override
-            protected Optional<Mailbox<MailboxId>> getOutbox(MailboxSession session) throws MailboxException {
-                Mailbox<MailboxId> fakeOutbox = mock(Mailbox.class);
+            protected Optional<Mailbox<TestId>> getOutbox(MailboxSession session) throws MailboxException {
+                Mailbox<TestId> fakeOutbox = mock(Mailbox.class);
                 when(fakeOutbox.getName()).thenReturn("outbox");
                 return Optional.of(fakeOutbox);
             }
@@ -125,9 +125,9 @@ public class SetMessagesCreationProcessorTest {
     @Test(expected = MailboxRoleNotFoundException.class)
     public void processShouldThrowWhenOutboxNotFound() {
         // Given
-        SetMessagesCreationProcessor<MailboxId> sut = new SetMessagesCreationProcessor<MailboxId>(null, null, null, null) {
+        SetMessagesCreationProcessor<TestId> sut = new SetMessagesCreationProcessor<TestId>(null, null, null, null) {
             @Override
-            protected Optional<Mailbox<MailboxId>> getOutbox(MailboxSession session) throws MailboxException {
+            protected Optional<Mailbox<TestId>> getOutbox(MailboxSession session) throws MailboxException {
                 return Optional.empty();
             }
         };
@@ -139,17 +139,17 @@ public class SetMessagesCreationProcessorTest {
     @SuppressWarnings("unchecked")
     public void processShouldCallMessageMapperWhenRequestHasNonEmptyCreate() throws MailboxException {
         // Given
-        Mailbox<MailboxId> fakeOutbox = mock(Mailbox.class);
-        MessageMapper<MailboxId> mockMapper = mock(MessageMapper.class);
-        MailboxSessionMapperFactory<MailboxId> stubSessionMapperFactory = mock(MailboxSessionMapperFactory.class);
+        Mailbox<TestId> fakeOutbox = mock(Mailbox.class);
+        MessageMapper<TestId> mockMapper = mock(MessageMapper.class);
+        MailboxSessionMapperFactory<TestId> stubSessionMapperFactory = mock(MailboxSessionMapperFactory.class);
         when(stubSessionMapperFactory.createMessageMapper(any(MailboxSession.class)))
                 .thenReturn(mockMapper);
 
-        SetMessagesCreationProcessor<MailboxId> sut = new SetMessagesCreationProcessor<MailboxId>(null, null,
+        SetMessagesCreationProcessor<TestId> sut = new SetMessagesCreationProcessor<TestId>(null, null,
                 stubSessionMapperFactory, new MIMEMessageConverter()) {
             @Override
-            protected Optional<Mailbox<MailboxId>> getOutbox(MailboxSession session) throws MailboxException {
-                MailboxId stubMailboxId = mock(MailboxId.class);
+            protected Optional<Mailbox<TestId>> getOutbox(MailboxSession session) throws MailboxException {
+                TestId stubMailboxId = mock(TestId.class);
                 when(stubMailboxId.serialize()).thenReturn("user|outbox|12345");
                 when(fakeOutbox.getMailboxId()).thenReturn(stubMailboxId);
                 when(fakeOutbox.getName()).thenReturn("outbox");
