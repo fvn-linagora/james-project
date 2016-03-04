@@ -78,7 +78,7 @@ public class JMAPConfigurationTest {
 
     @Test
     public void buildShouldWorkWhenRandomPort() {
-        JMAPConfiguration expectedJMAPConfiguration = new JMAPConfiguration("keystore", "secret", Optional.of("file://conf/jwt_publickey"), Optional.empty());
+        JMAPConfiguration expectedJMAPConfiguration = new JMAPConfiguration("keystore", "secret", Optional.of("file://conf/jwt_publickey"), Optional.empty(), 3, 1000);
 
         JMAPConfiguration jmapConfiguration = JMAPConfiguration.builder()
             .keystore("keystore")
@@ -91,7 +91,7 @@ public class JMAPConfigurationTest {
 
     @Test
     public void buildShouldWorkWhenFixedPort() {
-        JMAPConfiguration expectedJMAPConfiguration = new JMAPConfiguration("keystore", "secret", Optional.of("file://conf/jwt_publickey"), Optional.of(80));
+        JMAPConfiguration expectedJMAPConfiguration = new JMAPConfiguration("keystore", "secret", Optional.of("file://conf/jwt_publickey"), Optional.of(80), 3, 1000);
 
         JMAPConfiguration jmapConfiguration = JMAPConfiguration.builder()
             .keystore("keystore")
@@ -100,5 +100,31 @@ public class JMAPConfigurationTest {
             .port(80)
             .build();
         assertThat(jmapConfiguration).isEqualToComparingFieldByField(expectedJMAPConfiguration);
+    }
+
+    @Test
+    public void buildShouldWorkWhenRetryValuesAreSet() {
+        JMAPConfiguration expectedJMAPConfiguration = new JMAPConfiguration("keystore", "secret", Optional.of("file://conf/jwt_publickey"), Optional.of(80), 3, 1000);
+
+        JMAPConfiguration jmapConfiguration = JMAPConfiguration.builder()
+                .keystore("keystore")
+                .secret("secret")
+                .jwtPublicKeyPem(Optional.of("file://conf/jwt_publickey"))
+                .port(80)
+                .maxRetry(3)
+                .retryDelay(1000)
+                .build();
+        assertThat(jmapConfiguration).isEqualToComparingFieldByField(expectedJMAPConfiguration);
+    }
+
+    @Test
+    public void buildShouldThrowWhenRetryIsNull() {
+        assertThatThrownBy(() -> JMAPConfiguration.builder()
+                .keystore("keystore")
+                .secret("secret")
+                .jwtPublicKeyPem(Optional.of("file://conf/jwt_publickey"))
+                .port(80)
+                .build())
+                .isInstanceOf(IllegalStateException.class);
     }
 }

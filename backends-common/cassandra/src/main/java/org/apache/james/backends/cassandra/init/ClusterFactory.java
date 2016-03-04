@@ -24,6 +24,9 @@ import java.util.Optional;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.QueryOptions;
+import com.datastax.driver.core.SocketOptions;
+import com.datastax.driver.core.policies.ConstantReconnectionPolicy;
+import com.datastax.driver.core.policies.DefaultRetryPolicy;
 import com.datastax.driver.core.policies.ExponentialReconnectionPolicy;
 import com.datastax.driver.core.policies.ReconnectionPolicy;
 import com.google.common.base.Strings;
@@ -57,7 +60,14 @@ public class ClusterFactory {
         if (refreshSchemaIntervalMillis.isPresent()) {
             clusterBuilder.withQueryOptions(new QueryOptions().setRefreshSchemaIntervalMillis(refreshSchemaIntervalMillis.get()));
         }
-        clusterBuilder.withReconnectionPolicy(new ExponentialReconnectionPolicy(500, 120000));
+        // clusterBuilder.withReconnectionPolicy(new ExponentialReconnectionPolicy(500, 120000));
+        SocketOptions socketOptions = new SocketOptions().setReadTimeoutMillis(100000);
+        clusterBuilder
+                .withReconnectionPolicy(new ConstantReconnectionPolicy(1000))
+                .withRetryPolicy(DefaultRetryPolicy.INSTANCE)
+                .withQueryOptions(new QueryOptions().setFetchSize(2000))
+                .withSocketOptions(socketOptions);
+
         return clusterBuilder.build();
     }
 
