@@ -35,8 +35,6 @@ public class JMAPConfiguration {
         private String secret;
         private Optional<String> jwtPublicKeyPem;
         private Optional<Integer> port = Optional.empty();
-        private int maxRetry;
-        private long retryDelay;
 
         private Builder() {
             jwtPublicKeyPem = Optional.empty();
@@ -68,22 +66,10 @@ public class JMAPConfiguration {
             return this;
         }
 
-        public Builder maxRetry(int maxRetry) {
-            this.maxRetry = maxRetry;
-            return this;
-        }
-
-        public Builder retryDelay(long retryDelay) {
-            this.retryDelay = retryDelay;
-            return this;
-        }
-
         public JMAPConfiguration build() {
             Preconditions.checkState(!Strings.isNullOrEmpty(keystore), "'keystore' is mandatory");
             Preconditions.checkState(!Strings.isNullOrEmpty(secret), "'secret' is mandatory");
-            Preconditions.checkState(maxRetry != 0, "'maxRetry' is mandatory");
-            Preconditions.checkState(retryDelay != 0, "'retryDelay' is mandatory");
-            return new JMAPConfiguration(keystore, secret, jwtPublicKeyPem, port, maxRetry, retryDelay);
+            return new JMAPConfiguration(keystore, secret, jwtPublicKeyPem, port);
         }
     }
 
@@ -91,16 +77,12 @@ public class JMAPConfiguration {
     private final String secret;
     private final Optional<String> jwtPublicKeyPem;
     private final Optional<Integer> port;
-    private final int maxRetry;
-    private final long retryDelay;
 
-    @VisibleForTesting JMAPConfiguration(String keystore, String secret, Optional<String> jwtPublicKeyPem, Optional<Integer> port, int maxRetry, long retryDelay) {
+    @VisibleForTesting JMAPConfiguration(String keystore, String secret, Optional<String> jwtPublicKeyPem, Optional<Integer> port) {
         this.keystore = keystore;
         this.secret = secret;
         this.jwtPublicKeyPem = jwtPublicKeyPem;
         this.port = port;
-        this.maxRetry = maxRetry;
-        this.retryDelay = retryDelay;
     }
 
     public String getKeystore() {
@@ -117,13 +99,5 @@ public class JMAPConfiguration {
 
     public Optional<Integer> getPort() {
         return port;
-    }
-
-    public int getMaxRetry() {
-        return maxRetry;
-    }
-
-    public long getRetryDelay() {
-        return retryDelay;
     }
 }

@@ -20,11 +20,7 @@ package org.apache.james.modules.mailbox;
 
 import java.io.FileNotFoundException;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
@@ -79,12 +75,7 @@ public class CassandraSessionModule extends AbstractModule {
 
         int maxRetry = configuration.getInt("cassandra.retryConnection.maxAttempt", 10);
         int retryDelay = configuration.getInt("cassandra.retryConnection.delayBetweenAttempts", 5000);
-        return retry(NoHostAvailableException.class, conf -> ClusterWithKeyspaceCreatedFactory.clusterWithInitializedKeyspace(
-                ClusterFactory.createClusterForSingleServerWithoutPassWord(
-                        conf.getString("cassandra.ip"),
-                        conf.getInt("cassandra.port")),
-                conf.getString("cassandra.keyspace"),
-                conf.getInt("cassandra.replication.factor")), configuration, maxRetry, retryDelay);
+        return retry(NoHostAvailableException.class, buildClusterProvider(), configuration, maxRetry, retryDelay);
 
 //        Callable<Cluster> callable = new Callable<Cluster>() {
 //            @Override
@@ -101,23 +92,19 @@ public class CassandraSessionModule extends AbstractModule {
 //                conf.getInt("cassandra.replication.factor")));
 //
 //        return clusterProvider.get(configuration);
-//
-//        retryer.
-//
-//        try {
-//            return ClusterWithKeyspaceCreatedFactory.clusterWithInitializedKeyspace(
-//                ClusterFactory.createClusterForSingleServerWithoutPassWord(
-//                    configuration.getString("cassandra.ip"),
-//                    configuration.getInt("cassandra.port")),
-//                    configuration.getString("cassandra.keyspace"),
-//                    configuration.getInt("cassandra.replication.factor"));
-//        } catch (NoHostAvailableException e) {
-//            throw Throwables.propagate(e);
-//        }
+    }
+
+    private Function<PropertiesConfiguration, Cluster> buildClusterProvider() {
+        return conf -> ClusterWithKeyspaceCreatedFactory.clusterWithInitializedKeyspace(
+                ClusterFactory.createClusterForSingleServerWithoutPassWord(
+                        conf.getString("cassandra.ip"),
+                        conf.getInt("cassandra.port")),
+                conf.getString("cassandra.keyspace"),
+                conf.getInt("cassandra.replication.factor"));
     }
 
 
-    private <E extends RuntimeException, T, R> R retry(Class<E> exceptionType, Function<T, R> provider, T input, int maxRetries, long delayMillis) {
+    private static <E extends RuntimeException, T, R> R retry(Class<E> exceptionType, Function<T, R> provider, T input, int maxRetries, long delayMillis) {
         int retryCounter = 0;
         boolean hasSucceeded = false;
         R result = null;
