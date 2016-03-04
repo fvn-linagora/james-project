@@ -30,6 +30,8 @@ import org.apache.james.backends.cassandra.init.ClusterFactory;
 import org.apache.james.backends.cassandra.init.ClusterWithKeyspaceCreatedFactory;
 import org.apache.james.backends.cassandra.init.SessionWithInitializedTablesFactory;
 import org.apache.james.filesystem.api.FileSystem;
+import org.apache.james.modules.server.DefaultRetryer;
+import org.apache.james.modules.server.Retryer;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Session;
@@ -37,7 +39,6 @@ import com.datastax.driver.core.exceptions.NoHostAvailableException;
 //import com.github.rholder.retry.Retryer;
 //import com.github.rholder.retry.RetryerBuilder;
 //import com.github.rholder.retry.StopStrategies;
-import com.google.common.base.Throwables;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -73,9 +74,29 @@ public class CassandraSessionModule extends AbstractModule {
     Cluster provideCluster(FileSystem fileSystem) throws FileNotFoundException, ConfigurationException {
         PropertiesConfiguration configuration = getConfiguration(fileSystem);
 
-        int maxRetry = configuration.getInt("cassandra.retryConnection.maxAttempt", 10);
-        int retryDelay = configuration.getInt("cassandra.retryConnection.delayBetweenAttempts", 5000);
-        return retry(NoHostAvailableException.class, buildClusterProvider(), configuration, maxRetry, retryDelay);
+        return buildRetryer(configuration).retry(getClusterProvider(), configuration);
+    }
+
+    private Retryer<Cluster> buildRetryer(PropertiesConfiguration configuration) {
+        return DefaultRetryer.<Cluster>builder()
+                .retryIfExceptionOfType(NoHostAvailableException.class)
+                .whileLessAttemptsThan(configuration.getInt("cassandra.retryConnection.maxAttempt", 5))
+                .waitingBetweenAttempts(configuration.getInt("cassandra.retryConnection.delayBetweenAttempts", 7000))
+                .build();
+    }
+
+    private Function<PropertiesConfiguration, Cluster> getClusterProvider() {
+        return conf -> ClusterWithKeyspaceCreatedFactory.clusterWithInitializedKeyspace(
+                ClusterFactory.createClusterForSingleServerWithoutPassWord(
+                        conf.getString("cassandra.ip"),
+                        conf.getInt("cassandra.port")),
+                conf.getString("cassandra.keyspace"),
+                conf.getInt("cassandra.replication.factor"));
+    }
+
+    private PropertiesConfiguration getConfiguration(FileSystem fileSystem) throws FileNotFoundException, ConfigurationException {
+        return new PropertiesConfiguration(fileSystem.getFile(FileSystem.FILE_PROTOCOL_AND_CONF + "cassandra.properties"));
+    }
 
 //        Callable<Cluster> callable = new Callable<Cluster>() {
 //            @Override
@@ -92,42 +113,4 @@ public class CassandraSessionModule extends AbstractModule {
 //                conf.getInt("cassandra.replication.factor")));
 //
 //        return clusterProvider.get(configuration);
-    }
-
-    private Function<PropertiesConfiguration, Cluster> buildClusterProvider() {
-        return conf -> ClusterWithKeyspaceCreatedFactory.clusterWithInitializedKeyspace(
-                ClusterFactory.createClusterForSingleServerWithoutPassWord(
-                        conf.getString("cassandra.ip"),
-                        conf.getInt("cassandra.port")),
-                conf.getString("cassandra.keyspace"),
-                conf.getInt("cassandra.replication.factor"));
-    }
-
-
-    private static <E extends RuntimeException, T, R> R retry(Class<E> exceptionType, Function<T, R> provider, T input, int maxRetries, long delayMillis) {
-        int retryCounter = 0;
-        boolean hasSucceeded = false;
-        R result = null;
-        while(retryCounter < maxRetries && !hasSucceeded) {
-            try {
-                result = provider.apply(input);
-                hasSucceeded = true;
-            } catch (RuntimeException e) {
-                if (exceptionType.isInstance(e)) {
-                    retryCounter++;
-                    try {
-                        Thread.sleep(delayMillis);
-                    } catch (InterruptedException e1) {
-                        throw Throwables.propagate(e);
-                    }
-                }
-            }
-        }
-        return result;
-    }
-
-    private PropertiesConfiguration getConfiguration(FileSystem fileSystem) throws FileNotFoundException, ConfigurationException {
-        return new PropertiesConfiguration(fileSystem.getFile(FileSystem.FILE_PROTOCOL_AND_CONF + "cassandra.properties"));
-    }
-    
 }
