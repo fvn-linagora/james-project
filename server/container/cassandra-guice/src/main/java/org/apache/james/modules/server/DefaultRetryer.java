@@ -77,7 +77,24 @@ public class DefaultRetryer<R> implements Retryer<R> {
         int retryCounter = 0;
         boolean hasSucceeded = false;
         R result = null;
-        while(retryCounter < maxRetries && !hasSucceeded) {
+//        while(retryCounter < maxRetries && !hasSucceeded) {
+//            try {
+//                result = provider.apply(input);
+//                hasSucceeded = true;
+//            } catch (Exception e) {
+//                if (exceptionType.isInstance(e)) {
+//                    retryCounter++;
+//                    try {
+//                        Thread.sleep(delayMillis);
+//                    } catch (InterruptedException e1) {
+//                        throw Throwables.propagate(e1);
+//                    }
+//                }
+//            }
+//        }
+//        return result;
+
+        do {
             try {
                 result = provider.apply(input);
                 hasSucceeded = true;
@@ -91,7 +108,7 @@ public class DefaultRetryer<R> implements Retryer<R> {
                     }
                 }
             }
-        }
+        } while (retryCounter < maxRetries && !hasSucceeded);
         return result;
     }
 

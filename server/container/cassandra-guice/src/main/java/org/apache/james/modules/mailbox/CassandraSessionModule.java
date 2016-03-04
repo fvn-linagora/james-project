@@ -20,6 +20,9 @@ package org.apache.james.modules.mailbox;
 
 import java.io.FileNotFoundException;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.apache.commons.configuration.ConfigurationException;
@@ -30,25 +33,27 @@ import org.apache.james.backends.cassandra.init.ClusterFactory;
 import org.apache.james.backends.cassandra.init.ClusterWithKeyspaceCreatedFactory;
 import org.apache.james.backends.cassandra.init.SessionWithInitializedTablesFactory;
 import org.apache.james.filesystem.api.FileSystem;
-import org.apache.james.modules.server.DefaultRetryer;
-import org.apache.james.modules.server.Retryer;
+//import org.apache.james.modules.server.DefaultRetryer;
+//import org.apache.james.modules.server.Retryer;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
-//import com.github.rholder.retry.Retryer;
-//import com.github.rholder.retry.RetryerBuilder;
-//import com.github.rholder.retry.StopStrategies;
+import com.github.rholder.retry.RetryException;
+import com.github.rholder.retry.Retryer;
+import com.github.rholder.retry.RetryerBuilder;
+import com.github.rholder.retry.StopStrategies;
+import com.google.common.base.Throwables;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 
 public class CassandraSessionModule extends AbstractModule {
 
-//    private static Retryer<Cluster> retryer = RetryerBuilder.<Cluster>newBuilder()
-//            .retryIfExceptionOfType(NoHostAvailableException.class)
-//            .withStopStrategy(StopStrategies.stopAfterDelay(2, TimeUnit.MINUTES))
-//            .build();
+    private static Retryer<Cluster> retryer = RetryerBuilder.<Cluster>newBuilder()
+            .retryIfExceptionOfType(NoHostAvailableException.class)
+            .withStopStrategy(StopStrategies.stopAfterDelay(2, TimeUnit.MINUTES))
+            .build();
 
     @Override
     protected void configure() {
@@ -74,16 +79,25 @@ public class CassandraSessionModule extends AbstractModule {
     Cluster provideCluster(FileSystem fileSystem) throws FileNotFoundException, ConfigurationException {
         PropertiesConfiguration configuration = getConfiguration(fileSystem);
 
-        return buildRetryer(configuration).retry(getClusterProvider(), configuration);
+        Callable<Cluster> customerProvider = () -> getClusterProvider().apply(configuration);
+
+        try {
+            return retryer.call(customerProvider);
+        } catch (ExecutionException e) {
+            throw Throwables.propagate(e);
+        } catch (RetryException e) {
+            throw Throwables.propagate(e);
+        }
+//        return buildRetryer(configuration).retry(getClusterProvider(), configuration);
     }
 
-    private Retryer<Cluster> buildRetryer(PropertiesConfiguration configuration) {
-        return DefaultRetryer.<Cluster>builder()
-                .retryIfExceptionOfType(NoHostAvailableException.class)
-                .whileLessAttemptsThan(configuration.getInt("cassandra.retryConnection.maxAttempt", 5))
-                .waitingBetweenAttempts(configuration.getInt("cassandra.retryConnection.delayBetweenAttempts", 7000))
-                .build();
-    }
+//    private Retryer<Cluster> buildRetryer(PropertiesConfiguration configuration) {
+//        return DefaultRetryer.<Cluster>builder()
+//                .retryIfExceptionOfType(NoHostAvailableException.class)
+//                .whileLessAttemptsThan(configuration.getInt("cassandra.retryConnection.maxAttempt", 5))
+//                .waitingBetweenAttempts(configuration.getInt("cassandra.retryConnection.delayBetweenAttempts", 7000))
+//                .build();
+//    }
 
     private Function<PropertiesConfiguration, Cluster> getClusterProvider() {
         return conf -> ClusterWithKeyspaceCreatedFactory.clusterWithInitializedKeyspace(
