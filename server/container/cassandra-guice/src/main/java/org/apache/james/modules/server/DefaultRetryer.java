@@ -20,6 +20,7 @@
 package org.apache.james.modules.server;
 
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -36,12 +37,12 @@ public class DefaultRetryer<R> implements Retryer<R> {
         private long waitDelayInMillis = 0;
         private Class<? extends Throwable> exceptionClass;
 
-        public Builder whileLessAttemptsThan(int maxAttemptsNumber) {
+        public Builder withMaxRetries(int maxAttemptsNumber) {
             this.maxAttemptsNumber = maxAttemptsNumber;
             return this;
         }
 
-        public Builder waitingBetweenAttempts(long waitDelayInMillis) {
+        public Builder withFixedDelay(long waitDelayInMillis) {
             this.waitDelayInMillis = waitDelayInMillis;
             return this;
         }
@@ -73,13 +74,22 @@ public class DefaultRetryer<R> implements Retryer<R> {
         return retry(exceptionClass, provider, input, maxAttemptsNumber, waitDelayInMillis);
     }
 
+    @Override
+    public R retry(Supplier<R> supplier) {
+        return retry(exceptionClass, supplier, maxAttemptsNumber, waitDelayInMillis);
+    }
+
     private static <E extends Throwable, T, R> R retry(Class<? extends Throwable> exceptionType, Function<T, R> provider, T input, int maxRetries, long delayMillis) {
+        return retry(exceptionType, () -> provider.apply(input), maxRetries, delayMillis);
+    }
+
+    private static <E extends Throwable, R> R retry(Class<? extends Throwable> exceptionType, Supplier<R> supplier, int maxRetries, long delayMillis) {
         int retryCounter = 0;
         boolean hasSucceeded = false;
         R result = null;
         while(retryCounter < maxRetries && !hasSucceeded) {
             try {
-                result = provider.apply(input);
+                result = supplier.get();
                 hasSucceeded = true;
             } catch (Exception e) {
                 if (exceptionType.isInstance(e)) {

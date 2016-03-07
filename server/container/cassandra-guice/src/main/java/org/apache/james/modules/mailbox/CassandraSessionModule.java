@@ -80,8 +80,8 @@ public class CassandraSessionModule extends AbstractModule {
     private Retryer<Cluster> buildRetryer(PropertiesConfiguration configuration) {
         return DefaultRetryer.<Cluster>builder()
                 .retryIfExceptionOfType(NoHostAvailableException.class)
-                .whileLessAttemptsThan(configuration.getInt("cassandra.retryConnection.maxAttempt", 5))
-                .waitingBetweenAttempts(configuration.getInt("cassandra.retryConnection.delayBetweenAttempts", 7000))
+                .withMaxRetries(configuration.getInt("cassandra.retryConnection.maxAttempt", 5))
+                .withFixedDelay(configuration.getInt("cassandra.retryConnection.delayBetweenAttempts", 7000))
                 .build();
     }
 

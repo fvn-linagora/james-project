@@ -20,6 +20,7 @@
 package org.apache.james.modules.mailbox;
 
 import java.io.FileNotFoundException;
+import java.util.function.Supplier;
 
 import javax.inject.Singleton;
 
@@ -35,7 +36,12 @@ import org.apache.james.mailbox.elasticsearch.events.ElasticSearchListeningMessa
 import org.apache.james.mailbox.store.extractor.TextExtractor;
 import org.apache.james.mailbox.store.search.MessageSearchIndex;
 import org.apache.james.mailbox.tika.extractor.TikaTextExtractor;
+import org.apache.james.modules.server.DefaultRetryer;
+import org.apache.james.modules.server.Retryer;
+import org.elasticsearch.client.transport.NoNodeAvailableException;
 
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
@@ -52,13 +58,22 @@ public class ElasticSearchMailboxModule extends AbstractModule {
     @Singleton
     protected ClientProvider provideClientProvider(FileSystem fileSystem) throws ConfigurationException, FileNotFoundException {
         PropertiesConfiguration propertiesReader = new PropertiesConfiguration(fileSystem.getFile(FileSystem.FILE_PROTOCOL_AND_CONF + "elasticsearch.properties"));
+
         ClientProvider clientProvider = new ClientProviderImpl(propertiesReader.getString("elasticsearch.masterHost"),
-            propertiesReader.getInt("elasticsearch.port"));
-        IndexCreationFactory.createIndex(clientProvider,
+                propertiesReader.getInt("elasticsearch.port"));
+        buildRetryer(propertiesReader)
+                .retry(() ->IndexCreationFactory.createIndex(clientProvider,
             propertiesReader.getInt("elasticsearch.nb.shards"),
-            propertiesReader.getInt("elasticsearch.nb.replica"));
+            propertiesReader.getInt("elasticsearch.nb.replica")));
         NodeMappingFactory.applyMapping(clientProvider);
         return clientProvider;
     }
 
+    private Retryer<ClientProvider> buildRetryer(PropertiesConfiguration configuration) {
+        return DefaultRetryer.<ClientProvider>builder()
+                .retryIfExceptionOfType(NoNodeAvailableException.class)
+                .withMaxRetries(configuration.getInt("elasticsearch.retryConnection.maxRetries", 7))
+                .withFixedDelay(configuration.getInt("elasticsearch.retryConnection.fixedDelay", 3000))
+                .build();
+    }
 }

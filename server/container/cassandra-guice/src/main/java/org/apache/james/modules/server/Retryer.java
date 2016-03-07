@@ -20,8 +20,9 @@
 package org.apache.james.modules.server;
 
 import java.util.function.Function;
+import java.util.function.Supplier;
 
-@FunctionalInterface
 public interface Retryer<R> {
     <T> R retry(Function<T, R> provider, T input);
+    R retry(Supplier<R> provider);
 }
