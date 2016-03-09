@@ -34,6 +34,7 @@ import org.apache.james.filesystem.api.FileSystem;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -66,12 +67,21 @@ public class CassandraSessionModule extends AbstractModule {
     Cluster provideCluster(FileSystem fileSystem, AsyncRetryExecutor executor) throws FileNotFoundException, ConfigurationException, ExecutionException, InterruptedException {
         PropertiesConfiguration configuration = getConfiguration(fileSystem);
 
-        return ClusterWithKeyspaceCreatedFactory.clusterWithInitializedKeyspace(
-                ClusterFactory.createClusterForSingleServerWithoutPassWord(
-                        configuration.getString("cassandra.ip"),
-                        configuration.getInt("cassandra.port")),
-                configuration.getString("cassandra.keyspace"),
-                configuration.getInt("cassandra.replication.factor"));
+        return getRetryer(executor, configuration)
+                .getWithRetry(ctx -> ClusterWithKeyspaceCreatedFactory.clusterWithInitializedKeyspace(
+                        ClusterFactory.createClusterForSingleServerWithoutPassWord(
+                                configuration.getString("cassandra.ip"),
+                                configuration.getInt("cassandra.port")),
+                        configuration.getString("cassandra.keyspace"),
+                        configuration.getInt("cassandra.replication.factor")))
+                .get();
+    }
+
+    private static AsyncRetryExecutor getRetryer(AsyncRetryExecutor executor, PropertiesConfiguration configuration) {
+        return executor.retryOn(NoHostAvailableException.class)
+                .withProportionalJitter()
+                .withMaxRetries(configuration.getInt("cassandra.retryConnection.maxRetries", 10))
+                .withMinDelay(configuration.getInt("cassandra.retryConnection.fixedDelay", 5000));
     }
 
     @Provides
