@@ -20,6 +20,8 @@ package org.apache.james.modules.mailbox;
 
 import java.io.FileNotFoundException;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
@@ -35,11 +37,13 @@ import com.datastax.driver.core.Session;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.nurkiewicz.asyncretry.AsyncRetryExecutor;
 
 public class CassandraSessionModule extends AbstractModule {
 
     @Override
     protected void configure() {
+        bind(ScheduledExecutorService.class).toProvider(ScheduledExecutorServiceProvider.class);
     }
     
     @Provides
@@ -59,19 +63,28 @@ public class CassandraSessionModule extends AbstractModule {
 
     @Provides
     @Singleton
-    Cluster provideCluster(FileSystem fileSystem) throws FileNotFoundException, ConfigurationException {
+    Cluster provideCluster(FileSystem fileSystem, AsyncRetryExecutor executor) throws FileNotFoundException, ConfigurationException, ExecutionException, InterruptedException {
         PropertiesConfiguration configuration = getConfiguration(fileSystem);
-        
+
         return ClusterWithKeyspaceCreatedFactory.clusterWithInitializedKeyspace(
-            ClusterFactory.createClusterForSingleServerWithoutPassWord(
-                configuration.getString("cassandra.ip"),
-                configuration.getInt("cassandra.port")),
+                ClusterFactory.createClusterForSingleServerWithoutPassWord(
+                        configuration.getString("cassandra.ip"),
+                        configuration.getInt("cassandra.port")),
                 configuration.getString("cassandra.keyspace"),
                 configuration.getInt("cassandra.replication.factor"));
+    }
+
+    @Provides
+    AsyncRetryExecutor provideAsyncRetryExecutor(ScheduledExecutorService scheduler) {
+        return getRetryExecutor(scheduler);
+    }
+
+    private AsyncRetryExecutor getRetryExecutor(ScheduledExecutorService scheduler) {
+        return new AsyncRetryExecutor(scheduler);
     }
 
     private PropertiesConfiguration getConfiguration(FileSystem fileSystem) throws FileNotFoundException, ConfigurationException {
         return new PropertiesConfiguration(fileSystem.getFile(FileSystem.FILE_PROTOCOL_AND_CONF + "cassandra.properties"));
     }
-    
+
 }
