@@ -108,8 +108,8 @@ public class CassandraACLMapper {
                         return true;
                     }).get();
         } catch (InterruptedException | ExecutionException e) {
-            LOG.error("Can not retrieve next ModSeq", e);
-            throw new MailboxException("Error during ModSeq update", e);
+            LOG.error("Can not retrieve mailbox ACL", e);
+            throw new MailboxException("Error during mailbox ACL update", e);
         } finally {
             if (isNeitherNullNorShutdown(scheduler)) {
                 scheduler.shutdown();

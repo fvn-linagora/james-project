@@ -27,6 +27,7 @@ import javax.annotation.PreDestroy;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Provider;
 
+@VisibleForTesting
 class ScheduledExecutorServiceProvider implements Provider<ScheduledExecutorService> {
 
     private final ScheduledExecutorService scheduler;
