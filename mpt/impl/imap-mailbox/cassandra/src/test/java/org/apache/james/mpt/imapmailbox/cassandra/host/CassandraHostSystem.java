@@ -130,8 +130,6 @@ public class CassandraHostSystem extends JamesImapHostSystem {
     @Override
     protected void resetData() throws Exception {
         cassandraClusterSingleton.clearAllTables();
-        shutdownSchedulers();
-        schedulers = ImmutableList.<ScheduledExecutorService>builder();
     }
 
     private void shutdownSchedulers() {
@@ -164,4 +162,9 @@ public class CassandraHostSystem extends JamesImapHostSystem {
         return IMAP_FEATURES.supports(features);
     }
     
+    @Override
+    public void afterTests() throws Exception {
+        super.afterTests();
+        shutdownSchedulers();
+    }
 }
