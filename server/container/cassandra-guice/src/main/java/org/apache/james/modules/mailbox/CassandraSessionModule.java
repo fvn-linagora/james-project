@@ -89,10 +89,6 @@ public class CassandraSessionModule extends AbstractModule {
 
     @Provides
     private AsyncRetryExecutor provideAsyncRetryExecutor(ScheduledExecutorService scheduler) {
-        return getRetryExecutor(scheduler);
-    }
-
-    private AsyncRetryExecutor getRetryExecutor(ScheduledExecutorService scheduler) {
         return new AsyncRetryExecutor(scheduler);
     }
 
