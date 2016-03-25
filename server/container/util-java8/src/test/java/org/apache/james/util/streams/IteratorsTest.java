@@ -17,37 +17,42 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.utils;
+package org.apache.james.util.streams;
 
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import static java.util.stream.Collectors.toList;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import org.apache.james.jmap.model.mailbox.Mailbox;
+import java.util.stream.*;
 
-import com.google.common.collect.Lists;
+import org.junit.Test;
 
-public class MailboxHierarchySorter {
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.UnmodifiableIterator;
 
-    public List<Mailbox> sortFromRootToLeaf(List<Mailbox> mailboxes) {
+public class IteratorsTest {
 
-        Map<String, Mailbox> mapOfMailboxesById = indexMailboxesById(mailboxes);
+    @Test
+    public void toStreamShouldReturnEmptyStreamWhenEmptyIterator() {
+        //Given
+        UnmodifiableIterator<String> emptyIterator = ImmutableList.<String>of().iterator();
 
-        DependencyGraph<Mailbox> graph = new DependencyGraph<>(m ->
-                m.getParentId().map(mapOfMailboxesById::get));
+        //When
+        Stream<String> actual = Iterators.toStream(emptyIterator);
 
-        mailboxes.stream().forEach(graph::registerItem);
-
-        return graph.getBuildChain().collect(Collectors.toList());
+        //Then
+        assertThat(actual.count()).isEqualTo(0);
     }
 
-    private Map<String, Mailbox> indexMailboxesById(List<Mailbox> mailboxes) {
-        return mailboxes.stream()
-                .collect(Collectors.toMap(Mailbox::getId, Function.identity()));
+    @Test
+    public void toStreamShouldReturnSameContent() {
+        //Given
+        UnmodifiableIterator<String> iterator = ImmutableList.of("a", "b", "c").iterator();
+
+        //When
+        Stream<String> actual = Iterators.toStream(iterator);
+
+        //Then
+        assertThat(actual.collect(toList())).containsExactly("a", "b", "c");
     }
 
-    public List<Mailbox> sortFromLeafToRoot(List<Mailbox> mailboxes) {
-        return Lists.reverse(sortFromRootToLeaf(mailboxes));
-    }
 }

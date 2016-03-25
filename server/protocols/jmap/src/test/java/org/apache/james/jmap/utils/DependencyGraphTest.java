@@ -25,8 +25,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.Test;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -37,7 +37,8 @@ import com.google.common.collect.ImmutableSet;
 public class DependencyGraphTest {
 
     @Test
-    public void getOrderedShouldReturnOrderedMailbox() {
+    public void getBuildChainShouldReturnOrderedMailbox() {
+        // Given
         Commit a = new Commit("A");
         Commit b = new Commit("B", a);
         Commit c = new Commit("C", b);
@@ -46,21 +47,21 @@ public class DependencyGraphTest {
         Set<Commit> mailboxes = ImmutableSet.of(b, a, c);
         mailboxes.stream().forEach(graph::registerItem);
 
-        List<String> orderedMailboxes = graph.getBuildChain()
-                .map(Commit::getMessage)
-                .collect(Collectors.toList());
+        // When
+        Stream<Commit> orderedMailboxes = graph.getBuildChain();
 
-        assertThat(orderedMailboxes).containsExactly("A", "B", "C");
+        // Then
+        assertThat(orderedMailboxes).extracting(Commit::getMessage).containsExactly("A", "B", "C");
     }
 
     @Test
-    public void getOrderedWithEmptyGraphShouldReturnEmpty() {
+    public void getBuildChainWithEmptyGraphShouldReturnEmpty() {
         DependencyGraph<Commit> graph = new DependencyGraph<>(m -> null);
         assertThat(graph.getBuildChain()).isEmpty();
     }
 
     @Test
-    public void getOrderedOnIsolatedVerticesShouldReturnSameOrder() {
+    public void getBuildChainOnIsolatedVerticesShouldReturnSameOrder() {
         DependencyGraph<Commit> graph = new DependencyGraph<>(m -> Optional.empty());
         ImmutableList<Commit> isolatedMailboxes = ImmutableList.of(new Commit("A"), new Commit("B"), new Commit("C"));
         isolatedMailboxes.stream().forEach(graph::registerItem);
@@ -70,8 +71,52 @@ public class DependencyGraphTest {
         assertThat(orderedResultList).isEqualTo(isolatedMailboxes);
     }
 
+    @Test
+    public void getBuildChainOnTwoIsolatedTreesShouldWork() {
+        // a-b  d-e
+        //  \c   \f
+
+        //Given
+        Commit a = new Commit("A");
+        Commit b = new Commit("B", a);
+        Commit c = new Commit("C", b);
+        Commit d = new Commit("D");
+        Commit e = new Commit("E", d);
+        Commit f = new Commit("F", d);
+        List<Commit> input = ImmutableList.of(b, a, e, d, f, c);
+        DependencyGraph<Commit> testee = new DependencyGraph<>(Commit::getParent);
+        input.stream().forEach(testee::registerItem);
+
+        //When
+        Stream<Commit> actual = testee.getBuildChain();
+
+        //Then
+        assertThat(actual).extracting(Commit::getMessage).containsExactly("A", "D", "B", "E", "F", "C");
+    }
+
+    @Test
+    public void getBuildChainOnComplexTreeShouldWork() {
+        //Given
+        Commit a = new Commit("A");
+        Commit b = new Commit("B", a);
+        Commit c = new Commit("C", a);
+        Commit d = new Commit("D", b);
+        Commit e = new Commit("E", b);
+        Commit f = new Commit("F", c);
+        Commit g = new Commit("G", e);
+        List<Commit> input = ImmutableList.of(b, a, e, g, d, f, c);
+        DependencyGraph<Commit> testee = new DependencyGraph<>(Commit::getParent);
+        input.stream().forEach(testee::registerItem);
+
+        //When
+        Stream<Commit> actual = testee.getBuildChain();
+
+        //Then
+        assertThat(actual).extracting(Commit::getMessage).containsExactly("A", "B", "C", "E", "D", "F", "G");
+    }
+
+
     private static class Commit {
-        private final String hash;
         private final String message;
         private final Optional<Commit> parent;
 
@@ -83,13 +128,8 @@ public class DependencyGraphTest {
         @VisibleForTesting
         Commit(String message, Commit parent) {
             Preconditions.checkArgument(message != null);
-            this.hash = DigestUtils.sha1Hex(message);
             this.message = message;
             this.parent = Optional.ofNullable(parent);
-        }
-
-        public String getHash() {
-            return hash;
         }
 
         public Optional<Commit> getParent() {
@@ -98,10 +138,6 @@ public class DependencyGraphTest {
 
         public String getMessage() {
             return message;
-        }
-
-        public String toString() {
-            return "#" + hash.substring(0, 6) + " (#" + parent.map(p -> p.getHash().substring(0, 6)).orElse("(none)") + ") - " + message;
         }
     }
 }

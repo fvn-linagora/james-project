@@ -17,37 +17,16 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.jmap.utils;
+package org.apache.james.util.streams;
 
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.Iterator;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
-import org.apache.james.jmap.model.mailbox.Mailbox;
+public class Iterators {
 
-import com.google.common.collect.Lists;
-
-public class MailboxHierarchySorter {
-
-    public List<Mailbox> sortFromRootToLeaf(List<Mailbox> mailboxes) {
-
-        Map<String, Mailbox> mapOfMailboxesById = indexMailboxesById(mailboxes);
-
-        DependencyGraph<Mailbox> graph = new DependencyGraph<>(m ->
-                m.getParentId().map(mapOfMailboxesById::get));
-
-        mailboxes.stream().forEach(graph::registerItem);
-
-        return graph.getBuildChain().collect(Collectors.toList());
-    }
-
-    private Map<String, Mailbox> indexMailboxesById(List<Mailbox> mailboxes) {
-        return mailboxes.stream()
-                .collect(Collectors.toMap(Mailbox::getId, Function.identity()));
-    }
-
-    public List<Mailbox> sortFromLeafToRoot(List<Mailbox> mailboxes) {
-        return Lists.reverse(sortFromRootToLeaf(mailboxes));
+    public static <T> Stream<T> toStream(Iterator<T> iterator) {
+        Iterable<T> iterable = () -> iterator;
+        return StreamSupport.stream(iterable.spliterator(), false);
     }
 }

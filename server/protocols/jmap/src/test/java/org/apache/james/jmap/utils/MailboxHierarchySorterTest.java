@@ -75,20 +75,20 @@ public class MailboxHierarchySorterTest {
 
     @Test
     public void sortFromLeafToRootShouldReturnOrderedMailbox() {
+        //Given
         Mailbox inbox = Mailbox.builder().name("INBOX").id("INBOX").build();
         Mailbox a = Mailbox.builder().name("A").id("A").parentId("INBOX").build();
         Mailbox b = Mailbox.builder().name("B").id("B").parentId("INBOX").build();
         Mailbox c = Mailbox.builder().name("C").id("C").parentId("B").build();
         Mailbox d = Mailbox.builder().name("D").id("D").parentId("A").build();
         Mailbox e = Mailbox.builder().name("E").id("E").parentId("C").build();
-
         MailboxHierarchySorter sut = new MailboxHierarchySorter();
         ImmutableList<Mailbox> input = ImmutableList.of(b, c, d, a, inbox, e);
-        List<String> result = sut.sortFromLeafToRoot(input).stream()
-                .map(Mailbox::getName)
-                .collect(Collectors.toList());
 
-        assertThat(result).containsExactly("E", "D", "C", "A", "B", "INBOX");
+        //When
+        List<Mailbox> result = sut.sortFromLeafToRoot(input);
+
+        assertThat(result).extracting(Mailbox::getName).endsWith("INBOX").startsWith("E");
     }
 
     @Test

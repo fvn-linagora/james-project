@@ -19,12 +19,11 @@
 
 package org.apache.james.jmap.utils;
 
-import java.util.Iterator;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
+import org.apache.james.util.streams.Iterators;
 import org.jgrapht.graph.DefaultDirectedGraph;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.builder.DirectedGraphBuilder;
@@ -34,7 +33,6 @@ public class DependencyGraph<T> {
 
     private final DirectedGraphBuilder<T, DefaultEdge, DefaultDirectedGraph<T, DefaultEdge>> builder;
     private final Function<T, Optional<T>> getParent;
-
 
     public DependencyGraph(Function<T, Optional<T>> getParent) {
         this.getParent = getParent;
@@ -49,12 +47,7 @@ public class DependencyGraph<T> {
 
     public Stream<T> getBuildChain() {
         DefaultDirectedGraph<T, DefaultEdge> graph = builder.build();
-        return getStreamFromIterator(new TopologicalOrderIterator<>(graph));
-    }
-
-    private static <T> Stream<T> getStreamFromIterator(Iterator<T> iterator) {
-        Iterable<T> iterable = () -> iterator;
-        return StreamSupport.stream(iterable.spliterator(), false);
+        return Iterators.toStream(new TopologicalOrderIterator<>(graph));
     }
 
     public String toString() {
