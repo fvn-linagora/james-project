@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.inject.Inject;
 import javax.mail.Flags;
@@ -69,6 +70,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.functions.ThrowingFunction;
+import com.github.fge.lambdas.supplier.ThrowingSupplier;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
@@ -112,13 +114,15 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
         }
 
         // handle errors
+        Predicate<CreationMessage> notImplementedPredicate = getNotImplementedRequestTester(mailboxSession);
         Predicate<CreationMessage> validMessagesTester = CreationMessage::isValid;
         Predicate<CreationMessage> invalidMessagesTester = validMessagesTester.negate();
         SetMessagesResponse.Builder responseBuilder = SetMessagesResponse.builder()
-                .notCreated(handleCreationErrors(invalidMessagesTester, request));
+                .notCreated(handleCreationErrors(invalidMessagesTester, notImplementedPredicate, request));
 
+        // Dealing with sending messages only
         return request.getCreate().entrySet().stream()
-                .filter(e -> validMessagesTester.test(e.getValue()))
+                .filter(e -> isRequestForSending(e.getValue(), mailboxSession, validMessagesTester))
                 .map(e -> new MessageWithId.CreationMessageEntry(e.getKey(), e.getValue()))
                 .map(nuMsg -> createMessageInOutboxAndSend(nuMsg, mailboxSession, outbox, buildMessageIdFunc(mailboxSession, outbox)))
                 .map(msg -> SetMessagesResponse.builder().created(ImmutableMap.of(msg.getCreationId(), msg.getMessage())).build())
@@ -126,12 +130,58 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
                 .build();
     }
 
+    private boolean isRequestForSending(CreationMessage messageWithId, MailboxSession session,
+                                        Predicate<CreationMessage> validMessagesTester) {
+
+        ThrowingSupplier<Optional<Mailbox<Id>>> getOutboxFunc = () -> getOutbox(session);
+        boolean isMessageSetInOutbox = getOutboxFunc.get()
+                .map(box -> box.getMailboxId().serialize())
+                .map(id -> messageWithId.getMailboxIds().contains(id))
+                .orElse(false);
+        return validMessagesTester.test(messageWithId) && isMessageSetInOutbox;
+    }
+
+    private Predicate<CreationMessage> getNotImplementedRequestTester(MailboxSession mailboxSession) {
+        return e -> getDraftsId(mailboxSession)
+                .map(MailboxId::serialize)
+                .map(id -> e.getMailboxIds().contains(id)).orElse(false);
+    }
+
     private Map<CreationMessageId, SetError> handleCreationErrors(Predicate<CreationMessage> invalidMessagesTester,
+                                                                  Predicate<CreationMessage> notImplementedPredicate,
                                                                   SetMessagesRequest request) {
-        return request.getCreate().entrySet().stream()
+
+        Set<Map.Entry<CreationMessageId, CreationMessage>> creationRequestEntries = request.getCreate().entrySet();
+
+        Map<CreationMessageId, SetError> mapOfNotImplEntries = getMapOfNotImplErrors(notImplementedPredicate, creationRequestEntries);
+
+        List<AbstractMap.SimpleEntry<CreationMessageId, SetError>> invalidArgumentsErrors = getInvalidArgumentsErrors(creationRequestEntries, invalidMessagesTester, mapOfNotImplEntries);
+
+        // Merge maps of SetErrors
+        return Stream.concat(mapOfNotImplEntries.entrySet().stream(), invalidArgumentsErrors.stream())
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    private Map<CreationMessageId, SetError> getMapOfNotImplErrors(Predicate<CreationMessage> notImplementedPredicate,
+                                                                   Set<Map.Entry<CreationMessageId, CreationMessage>> creationRequestEntries) {
+
+        SetError notImplementedError = SetError.builder().type("error").description("Not yet implemented").build();
+
+        return creationRequestEntries.stream()
+                .filter(e -> notImplementedPredicate.test(e.getValue()))
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> notImplementedError));
+    }
+
+    private List<AbstractMap.SimpleEntry<CreationMessageId, SetError>> getInvalidArgumentsErrors(
+            Set<Map.Entry<CreationMessageId, CreationMessage>> creationRequestEntries,
+            Predicate<CreationMessage> invalidMessagesTester, Map<CreationMessageId, SetError> mapOfNotImplEntries) {
+
+        // Deal with invalid arguments but only for entries that have not been flagged yet (ie not impl...)
+        return creationRequestEntries.stream()
+                .filter(e -> !mapOfNotImplEntries.containsKey(e.getKey())) // exclude requests that have already been flagged with "not implemented"
                 .filter(e -> invalidMessagesTester.test(e.getValue()))
                 .map(e -> new AbstractMap.SimpleEntry<>(e.getKey(), buildSetErrorFromValidationResult(e.getValue().validate())))
-                .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
+                .collect(Collectors.toList());
     }
 
     private SetError buildSetErrorFromValidationResult(List<ValidationResult> validationErrors) {
@@ -200,9 +250,27 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
     }
 
     private boolean hasRoleOutbox(MailboxPath mailBoxPath) {
+        return hasRole(Role.OUTBOX, mailBoxPath);
+    }
+
+    private boolean hasRole(Role aRole, MailboxPath mailBoxPath) {
         return Role.from(mailBoxPath.getName())
-                .map(Role.OUTBOX::equals)
+                .map(aRole::equals)
                 .orElse(false);
+    }
+
+    private boolean hasRoleDrafts(MailboxPath mailBoxPath) {
+        return hasRole(Role.DRAFTS, mailBoxPath);
+    }
+
+    protected Optional<Id> getDraftsId(MailboxSession session) {
+        ThrowingSupplier<List<MailboxMetaData>> getAllMailboxes = () -> mailboxManager.search(MailboxQuery.builder(session).privateUserMailboxes().build(), session);
+            return getAllMailboxes.get().stream()
+                .map(MailboxMetaData::getPath)
+                .filter(this::hasRoleDrafts)
+                .map(loadMailbox(session))
+                .map(m -> m.getMailboxId())
+                .findFirst();
     }
 
     private ThrowingFunction<MailboxPath, Mailbox<Id>> loadMailbox(MailboxSession session) {
