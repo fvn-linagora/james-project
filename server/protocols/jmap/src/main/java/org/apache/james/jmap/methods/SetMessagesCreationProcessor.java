@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.inject.Inject;
 import javax.mail.Flags;
@@ -50,14 +51,11 @@ import org.apache.james.jmap.model.mailbox.Role;
 import org.apache.james.jmap.send.MailFactory;
 import org.apache.james.jmap.send.MailMetadata;
 import org.apache.james.jmap.send.MailSpool;
-import org.apache.james.mailbox.MailboxManager;
+import org.apache.james.jmap.utils.SystemMailboxesProvider;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.model.MailboxMetaData;
 import org.apache.james.mailbox.model.MailboxPath;
-import org.apache.james.mailbox.model.MailboxQuery;
 import org.apache.james.mailbox.store.MailboxSessionMapperFactory;
-import org.apache.james.mailbox.store.mail.MailboxMapperFactory;
 import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
@@ -68,7 +66,6 @@ import org.apache.mailet.Mail;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.fge.lambdas.functions.ThrowingFunction;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
@@ -78,47 +75,47 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SetMessagesCreationProcessor.class);
 
-    private final MailboxMapperFactory<Id> mailboxMapperFactory;
-    private final MailboxManager mailboxManager;
     private final MailboxSessionMapperFactory<Id> mailboxSessionMapperFactory;
     private final MIMEMessageConverter mimeMessageConverter;
     private final MailSpool mailSpool;
     private final MailFactory<Id> mailFactory;
+    private final SystemMailboxesProvider<Id> systemMailboxesProvider;
 
-    @Inject
     @VisibleForTesting
-    SetMessagesCreationProcessor(MailboxMapperFactory<Id> mailboxMapperFactory,
-                                 MailboxManager mailboxManager,
-                                 MailboxSessionMapperFactory<Id> mailboxSessionMapperFactory,
+    @Inject
+    SetMessagesCreationProcessor(MailboxSessionMapperFactory<Id> mailboxSessionMapperFactory,
                                  MIMEMessageConverter mimeMessageConverter,
                                  MailSpool mailSpool,
-                                 MailFactory<Id> mailFactory) {
-        this.mailboxMapperFactory = mailboxMapperFactory;
-        this.mailboxManager = mailboxManager;
+                                 MailFactory<Id> mailFactory,
+                                 SystemMailboxesProvider<Id> systemMailboxesProvider) {
         this.mailboxSessionMapperFactory = mailboxSessionMapperFactory;
         this.mimeMessageConverter = mimeMessageConverter;
         this.mailSpool = mailSpool;
         this.mailFactory = mailFactory;
+        this.systemMailboxesProvider = systemMailboxesProvider;
     }
 
     @Override
     public SetMessagesResponse process(SetMessagesRequest request, MailboxSession mailboxSession) {
         Mailbox<Id> outbox;
         try {
-            outbox = getOutbox(mailboxSession).orElseThrow(() -> new MailboxRoleNotFoundException(Role.OUTBOX));
-        } catch (MailboxException | MailboxRoleNotFoundException e) {
+            outbox = systemMailboxesProvider.getStreamOfMailboxesFromRole(Role.OUTBOX, mailboxSession).findFirst()
+                    .orElseThrow(() -> new MailboxRoleNotFoundException(Role.OUTBOX));
+        } catch (MailboxRoleNotFoundException e) {
             LOGGER.error("Unable to find a mailbox with role 'outbox'!");
             throw Throwables.propagate(e);
         }
 
         // handle errors
+        Predicate<CreationMessage> notImplementedPredicate = getNotImplementedRequestTester(mailboxSession);
         Predicate<CreationMessage> validMessagesTester = CreationMessage::isValid;
         Predicate<CreationMessage> invalidMessagesTester = validMessagesTester.negate();
         SetMessagesResponse.Builder responseBuilder = SetMessagesResponse.builder()
-                .notCreated(handleCreationErrors(invalidMessagesTester, request));
+                .notCreated(handleCreationErrors(request, invalidMessagesTester, notImplementedPredicate));
 
+        // Dealing with sending messages only
         return request.getCreate().entrySet().stream()
-                .filter(e -> validMessagesTester.test(e.getValue()))
+                .filter(e -> isRequestForSending(e.getValue(), mailboxSession, validMessagesTester))
                 .map(e -> new MessageWithId.CreationMessageEntry(e.getKey(), e.getValue()))
                 .map(nuMsg -> createMessageInOutboxAndSend(nuMsg, mailboxSession, outbox, buildMessageIdFunc(mailboxSession, outbox)))
                 .map(msg -> SetMessagesResponse.builder().created(ImmutableMap.of(msg.getCreationId(), msg.getMessage())).build())
@@ -126,12 +123,58 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
                 .build();
     }
 
-    private Map<CreationMessageId, SetError> handleCreationErrors(Predicate<CreationMessage> invalidMessagesTester,
-                                                                  SetMessagesRequest request) {
-        return request.getCreate().entrySet().stream()
-                .filter(e -> invalidMessagesTester.test(e.getValue()))
+    private boolean isRequestForSending(CreationMessage messageWithId, MailboxSession session,
+                                        Predicate<CreationMessage> validMessagesTester) {
+
+        boolean isMessageSetInOutbox = systemMailboxesProvider.getStreamOfMailboxesFromRole(Role.OUTBOX, session).findFirst()
+                .map(box -> box.getMailboxId().serialize())
+                .map(id -> messageWithId.getMailboxIds().contains(id))
+                .orElse(false);
+        return validMessagesTester.test(messageWithId) && isMessageSetInOutbox;
+    }
+
+    private Predicate<CreationMessage> getNotImplementedRequestTester(MailboxSession mailboxSession) {
+        Optional<Id> draftsId = systemMailboxesProvider.getStreamOfMailboxesFromRole(Role.DRAFTS, mailboxSession)
+                .map(Mailbox::getMailboxId)
+                .findFirst();
+        return e -> draftsId
+                .map(MailboxId::serialize)
+                .map(id -> e.getMailboxIds().contains(id))
+                .orElse(false);
+    }
+
+    private Map<CreationMessageId, SetError> handleCreationErrors(SetMessagesRequest request,
+                                                                  Predicate<CreationMessage> invalidMessagesTester,
+                                                                  Predicate<CreationMessage> notImplementedPredicate) {
+
+        Set<Map.Entry<CreationMessageId, CreationMessage>> creationRequestEntries = request.getCreate().entrySet();
+        Map<CreationMessageId, SetError> mapOfNotImplEntries = getMapOfNotImplErrors(notImplementedPredicate, creationRequestEntries);
+        List<AbstractMap.SimpleEntry<CreationMessageId, SetError>> invalidArgumentsErrors = getInvalidArgumentsErrors(creationRequestEntries, invalidMessagesTester, mapOfNotImplEntries);
+        // Merge maps of SetErrors
+        return Stream.concat(mapOfNotImplEntries.entrySet().stream(), invalidArgumentsErrors.stream())
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    private Map<CreationMessageId, SetError> getMapOfNotImplErrors(Predicate<CreationMessage> notImplementedPredicate,
+                                                                   Set<Map.Entry<CreationMessageId, CreationMessage>> creationRequestEntries) {
+
+        SetError notImplementedError = SetError.builder().type("error").description("Not yet implemented").build();
+
+        return creationRequestEntries.stream()
+                .filter(e -> notImplementedPredicate.test(e.getValue()))
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> notImplementedError));
+    }
+
+    private List<AbstractMap.SimpleEntry<CreationMessageId, SetError>> getInvalidArgumentsErrors(
+            Set<Map.Entry<CreationMessageId, CreationMessage>> creationRequestEntries,
+            Predicate<CreationMessage> invalidMessagesTester, Map<CreationMessageId, SetError> mapOfNotImplEntries) {
+
+        Predicate<Map.Entry<CreationMessageId, CreationMessage>> isCreationRequestImplemented = e -> !mapOfNotImplEntries.containsKey(e.getKey());
+        // Deal with invalid arguments but only for entries that have not been flagged yet (ie not impl...)
+        return creationRequestEntries.stream()
+                .filter(e -> isCreationRequestImplemented.test(e) && invalidMessagesTester.test(e.getValue()))
                 .map(e -> new AbstractMap.SimpleEntry<>(e.getKey(), buildSetErrorFromValidationResult(e.getValue().validate())))
-                .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
+                .collect(Collectors.toList());
     }
 
     private SetError buildSetErrorFromValidationResult(List<ValidationResult> validationErrors) {
@@ -187,26 +230,6 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
 
         return new SimpleMailboxMessage<>(internalDate, size,
                 bodyStartOctet, content, flags, propertyBuilder, mailboxId);
-    }
-
-    @VisibleForTesting
-    protected Optional<Mailbox<Id>> getOutbox(MailboxSession session) throws MailboxException {
-        return mailboxManager.search(MailboxQuery.builder(session)
-                .privateUserMailboxes().build(), session).stream()
-            .map(MailboxMetaData::getPath)
-            .filter(this::hasRoleOutbox)
-            .map(loadMailbox(session))
-            .findFirst();
-    }
-
-    private boolean hasRoleOutbox(MailboxPath mailBoxPath) {
-        return Role.from(mailBoxPath.getName())
-                .map(Role.OUTBOX::equals)
-                .orElse(false);
-    }
-
-    private ThrowingFunction<MailboxPath, Mailbox<Id>> loadMailbox(MailboxSession session) {
-        return path -> mailboxMapperFactory.getMailboxMapper(session).findMailboxByPath(path);
     }
 
     private PropertyBuilder buildPropertyBuilder() {
