@@ -21,6 +21,7 @@ package org.apache.james.mailbox.inmemory;
 import org.apache.james.mailbox.MailboxSession;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.exception.SubscriptionException;
+import org.apache.james.mailbox.inmemory.mail.InMemoryAttachmentMapper;
 import org.apache.james.mailbox.inmemory.mail.InMemoryMailboxMapper;
 import org.apache.james.mailbox.inmemory.mail.InMemoryMessageMapper;
 import org.apache.james.mailbox.inmemory.mail.InMemoryModSeqProvider;
@@ -37,11 +38,13 @@ public class InMemoryMailboxSessionMapperFactory extends MailboxSessionMapperFac
     private final MailboxMapper<InMemoryId> mailboxMapper;
     private final MessageMapper<InMemoryId> messageMapper;
     private final SubscriptionMapper subscriptionMapper;
+    private final InMemoryAttachmentMapper inMemoryAttachmentMapper;
     
     public InMemoryMailboxSessionMapperFactory() {
         mailboxMapper = new InMemoryMailboxMapper();
         messageMapper = new InMemoryMessageMapper(null, new InMemoryUidProvider(), new InMemoryModSeqProvider());
         subscriptionMapper = new InMemorySubscriptionMapper();
+        inMemoryAttachmentMapper = new InMemoryAttachmentMapper();
     }
     
     @Override
@@ -67,6 +70,6 @@ public class InMemoryMailboxSessionMapperFactory extends MailboxSessionMapperFac
 
     @Override
     public AttachmentMapper createAttachmentMapper() {
-        throw new UnsupportedOperationException();
+        return inMemoryAttachmentMapper;
     }
 }

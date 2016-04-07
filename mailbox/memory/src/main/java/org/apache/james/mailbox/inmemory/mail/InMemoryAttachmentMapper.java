@@ -17,24 +17,47 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.store.mail.model;
+package org.apache.james.mailbox.inmemory.mail;
+
+import java.io.InputStream;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
-import org.apache.james.mailbox.store.mail.MailboxMapper;
-import org.apache.james.mailbox.store.mail.MessageMapper;
 
-public interface MapperProvider<Id extends MailboxId> {
+public class InMemoryAttachmentMapper implements AttachmentMapper {
 
-    MailboxMapper<Id> createMailboxMapper() throws MailboxException;
+    private static final int INITIAL_SIZE = 64;
+    private final Map<String, InputStream> attachmentsById;
 
-    MessageMapper<Id> createMessageMapper() throws MailboxException;
+    public InMemoryAttachmentMapper() {
+        attachmentsById = new ConcurrentHashMap<String, InputStream>(INITIAL_SIZE);
+    }
 
-    AttachmentMapper createAttachmentMapper();
+    @Override
+    public void endRequest() {
+        // Do nothing
+    }
 
-    Id generateId();
+    @Override
+    public <T> T execute(Transaction<T> transaction) throws MailboxException {
+        return transaction.run();
+    }
 
-    void clearMapper() throws MailboxException;
+    @Override
+    public void add(String blobId, InputStream blob) {
+        attachmentsById.put(blobId, blob);
+    }
 
-    void ensureMapperPrepared() throws MailboxException;
+    @Override
+    public InputStream get(String blobId) {
+        return attachmentsById.get(blobId);
+    }
+
+    @Override
+    public void remove(String blobId) {
+        attachmentsById.remove(blobId);
+    }
+
 }

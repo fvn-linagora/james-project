@@ -17,24 +17,14 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.mailbox.store.mail.model;
+package org.apache.james.mailbox.inmemory.mail;
 
-import org.apache.james.mailbox.exception.MailboxException;
-import org.apache.james.mailbox.store.mail.AttachmentMapper;
-import org.apache.james.mailbox.store.mail.MailboxMapper;
-import org.apache.james.mailbox.store.mail.MessageMapper;
+import org.apache.james.mailbox.inmemory.InMemoryId;
+import org.apache.james.mailbox.store.mail.model.AbstractAttachmentMapperTest;
 
-public interface MapperProvider<Id extends MailboxId> {
+public class InMemoryAttachmentMapperTest extends AbstractAttachmentMapperTest<InMemoryId> {
 
-    MailboxMapper<Id> createMailboxMapper() throws MailboxException;
-
-    MessageMapper<Id> createMessageMapper() throws MailboxException;
-
-    AttachmentMapper createAttachmentMapper();
-
-    Id generateId();
-
-    void clearMapper() throws MailboxException;
-
-    void ensureMapperPrepared() throws MailboxException;
+    public InMemoryAttachmentMapperTest() {
+        super(new InMemoryMapperProvider());
+    }
 }
