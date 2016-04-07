@@ -5,6 +5,7 @@ import org.apache.james.backends.cassandra.init.CassandraModuleComposite;
 import org.apache.james.mailbox.cassandra.CassandraId;
 import org.apache.james.mailbox.cassandra.CassandraMailboxSessionMapperFactory;
 import org.apache.james.mailbox.cassandra.modules.CassandraAclModule;
+import org.apache.james.mailbox.cassandra.modules.CassandraAttachmentModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraMailboxCounterModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraMailboxModule;
 import org.apache.james.mailbox.cassandra.modules.CassandraMessageModule;
@@ -20,6 +21,7 @@ public class CassandraMapperProvider implements MapperProvider<CassandraId> {
 
     private static final CassandraCluster cassandra = CassandraCluster.create(new CassandraModuleComposite(
         new CassandraAclModule(),
+        new CassandraAttachmentModule(),
         new CassandraMailboxModule(),
         new CassandraMessageModule(),
         new CassandraMailboxCounterModule(),
@@ -47,7 +49,7 @@ public class CassandraMapperProvider implements MapperProvider<CassandraId> {
 
     @Override
     public AttachmentMapper createAttachmentMapper() {
-        throw new UnsupportedOperationException();
+        return new CassandraAttachmentMapper(cassandra.getConf());
     }
 
     @Override
