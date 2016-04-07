@@ -57,7 +57,7 @@ public class JMAPModule<Id extends MailboxId> extends AbstractModule {
         bind(RequestHandler.class).in(Singleton.class);
         Multibinder<ConfigurationPerformer> preconditions = Multibinder.newSetBinder(binder(), ConfigurationPerformer.class);
         preconditions.addBinding().to(MailetConfigurationPrecondition.class);
-        preconditions.addBinding().to(MoveCapabilityPrecondition.class);
+        preconditions.addBinding().to(CapabilitiesPrecondition.class);
     }
 
     @Provides
@@ -109,12 +109,12 @@ public class JMAPModule<Id extends MailboxId> extends AbstractModule {
     }
 
     @Singleton
-    public static class MoveCapabilityPrecondition implements ConfigurationPerformer {
+    public static class CapabilitiesPrecondition implements ConfigurationPerformer {
 
         private final MailboxManager mailboxManager;
 
         @Inject
-        public MoveCapabilityPrecondition(MailboxManager mailboxManager) {
+        public CapabilitiesPrecondition(MailboxManager mailboxManager) {
             this.mailboxManager = mailboxManager;
         }
 
@@ -122,6 +122,8 @@ public class JMAPModule<Id extends MailboxId> extends AbstractModule {
         public void initModule() throws Exception {
             Preconditions.checkArgument(mailboxManager.getSupportedCapabilities().contains(MailboxManager.Capabilities.Move),
                     "MOVE support in MailboxManager is required by JMAP Module");
+            Preconditions.checkArgument(mailboxManager.getSupportedCapabilities().contains(MailboxManager.Capabilities.AttachmentStore),
+                    "AttachmentStore support in MailboxManager is required by JMAP Module");
         }
     }
 }
