@@ -19,7 +19,6 @@
 
 package org.apache.james.mailbox.cassandra.mail;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.delete;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.insertInto;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
@@ -28,17 +27,25 @@ import static org.apache.james.mailbox.cassandra.table.CassandraAttachmentTable.
 import static org.apache.james.mailbox.cassandra.table.CassandraAttachmentTable.TABLE_NAME;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.MissingResourceException;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.NullArgumentException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
+import org.apache.james.mailbox.store.mail.model.Attachment;
+import org.apache.james.mailbox.store.mail.model.AttachmentId;
+import org.apache.james.mailbox.store.mail.model.impl.SimpleAttachment;
+import org.apache.james.mailbox.store.streaming.ByteContent;
+import org.apache.james.mailbox.store.transaction.Mapper;
 
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.querybuilder.QueryBuilder;
+import com.google.common.base.Throwables;
 
-public class CassandraAttachmentMapper implements AttachmentMapper {
+public class CassandraAttachmentMapper implements AttachmentMapper, Mapper {
 
     private final Session session;
 
@@ -57,37 +64,49 @@ public class CassandraAttachmentMapper implements AttachmentMapper {
     }
 
     @Override
-    public void add(String blobId, InputStream blob) {
-        try {
-            session.execute(
-                    insertInto(TABLE_NAME)
-                        .value(ID, blobId)
-                        .value(BLOB, ByteBuffer.wrap(IOUtils.toByteArray(blob)))
-                    );
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    public InputStream get(String blobId) {
+    public Attachment get(AttachmentId blobId) {
+        assertIdIsNotNull(blobId);
         ResultSet resultSet = session.execute(
                 select(BLOB)
                     .from(TABLE_NAME)
-                    .where(eq(ID, blobId))
+                    .where(eq(ID, blobId.serialize()))
                 );
-        if (!resultSet.isExhausted()) {
-            return IOUtils.toInputStream(resultSet.one().getBytes(BLOB).asCharBuffer().toString());
+        if (resultSet.isExhausted()) {
+            throw new IllegalArgumentException("blobId");
+        } else {
+            return new SimpleAttachment(blobId, new ByteContent(resultSet.one().getBytes(BLOB).array()));
         }
-        return null;
     }
 
     @Override
-    public void remove(String blobId) {
-        session.execute(
-                delete()
-                    .from(TABLE_NAME)
-                    .where(eq(ID, blobId)));
+    public void put(Attachment attachment) {
+        try {
+            session.execute(
+                    insertInto(TABLE_NAME)
+                        .value(ID, getBlobId(attachment))
+                        .value(BLOB, ByteBuffer.wrap(IOUtils.toByteArray(attachment.getContent().getInputStream())))
+                    );
+        } catch (IOException e) {
+            throw Throwables.propagate(e);
+        }
     }
 
+    private String getBlobId(Attachment attachment) {
+        return attachment.getId().serialize();
+    }
+
+    @Override
+    public void delete(AttachmentId blobId) {
+        assertIdIsNotNull(blobId);
+        session.execute(
+                QueryBuilder.delete()
+                    .from(TABLE_NAME)
+                    .where(eq(ID, blobId.serialize())));
+    }
+
+    private void assertIdIsNotNull(AttachmentId blobId) {
+        if (blobId == null) {
+            throw new NullArgumentException("blobId");
+        }
+    }
 }

@@ -19,20 +19,23 @@
 
 package org.apache.james.mailbox.inmemory.mail;
 
-import java.io.InputStream;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.lang.NullArgumentException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
+import org.apache.james.mailbox.store.mail.model.Attachment;
+import org.apache.james.mailbox.store.mail.model.AttachmentId;
+import org.apache.james.mailbox.store.transaction.Mapper;
 
-public class InMemoryAttachmentMapper implements AttachmentMapper {
+public class InMemoryAttachmentMapper implements AttachmentMapper, Mapper {
 
     private static final int INITIAL_SIZE = 64;
-    private final Map<String, InputStream> attachmentsById;
+    private final Map<AttachmentId, Attachment> attachmentsById;
 
     public InMemoryAttachmentMapper() {
-        attachmentsById = new ConcurrentHashMap<String, InputStream>(INITIAL_SIZE);
+        attachmentsById = new ConcurrentHashMap<AttachmentId, Attachment>(INITIAL_SIZE);
     }
 
     @Override
@@ -41,23 +44,39 @@ public class InMemoryAttachmentMapper implements AttachmentMapper {
     }
 
     @Override
-    public <T> T execute(Transaction<T> transaction) throws MailboxException {
+    public <T> T execute(Mapper.Transaction<T> transaction) throws MailboxException {
         return transaction.run();
     }
 
     @Override
-    public void add(String blobId, InputStream blob) {
-        attachmentsById.put(blobId, blob);
-    }
-
-    @Override
-    public InputStream get(String blobId) {
+    public Attachment get(AttachmentId blobId) {
+        assertIdIsNotNull(blobId);
+        if (!attachmentsById.containsKey(blobId))
+            throw new IllegalArgumentException("blobId");
         return attachmentsById.get(blobId);
     }
 
     @Override
-    public void remove(String blobId) {
-        attachmentsById.remove(blobId);
+    public void put(Attachment attachment) {
+        AttachmentId id = attachment.getId();
+        assertIdIsNotNull(id);
+        if (attachmentsById.containsKey(id)) {
+            attachmentsById.remove(attachment);
+        }
+        attachmentsById.put(id, attachment);
     }
 
+    @Override
+    public void delete(AttachmentId blobId) {
+        assertIdIsNotNull(blobId);
+        if (attachmentsById.containsKey(blobId)) {
+            attachmentsById.remove(blobId);
+        }
+    }
+
+    private void assertIdIsNotNull(AttachmentId blobId) {
+        if (blobId == null) {
+            throw new NullArgumentException("blobId");
+        }
+    }
 }

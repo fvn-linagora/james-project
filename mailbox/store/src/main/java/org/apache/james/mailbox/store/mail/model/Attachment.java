@@ -16,16 +16,12 @@
  * specific language governing permissions and limitations      *
  * under the License.                                           *
  ****************************************************************/
-package org.apache.james.mailbox.store.mail;
 
-import org.apache.james.mailbox.store.mail.model.Attachment;
-import org.apache.james.mailbox.store.mail.model.AttachmentId;
+package org.apache.james.mailbox.store.mail.model;
 
-public interface AttachmentMapper {
+import org.apache.james.mailbox.model.Content;
 
-    Attachment get(AttachmentId blobId);
-
-    void put(Attachment attachment);
-
-    void delete(AttachmentId blobId);
+public interface Attachment {
+    AttachmentId getId();
+    Content getContent();
 }

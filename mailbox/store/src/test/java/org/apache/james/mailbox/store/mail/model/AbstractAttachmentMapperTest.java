@@ -20,18 +20,23 @@
 package org.apache.james.mailbox.store.mail.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.NullArgumentException;
 import org.apache.james.mailbox.exception.MailboxException;
+import org.apache.james.mailbox.model.Content;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
+import org.apache.james.mailbox.store.mail.model.impl.SimpleAttachment;
+import org.apache.james.mailbox.store.streaming.ByteContent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Objects;
 
 /**
  * Generic purpose tests for your implementation MailboxMapper.
@@ -60,46 +65,113 @@ public abstract class AbstractAttachmentMapperTest<Id extends MailboxId> {
     }
 
     @Test
-    public void addShouldWork() throws IOException {
+    public void putShouldWork() throws IOException {
         // Given
-        String blobId = "blobId";
-        String expected = "content";
+        InMemoryAttachmentId blobId = InMemoryAttachmentId.of(1);
+        String expectedContent = "content";
+        Content content = new ByteContent(expectedContent.getBytes(Charsets.UTF_8));
+        Attachment newAttachment = new SimpleAttachment(blobId, content);
 
         // When
-        attachmentMapper.add(blobId, IOUtils.toInputStream(expected, Charsets.UTF_8));
+        attachmentMapper.put(newAttachment);
 
         // Then
-        InputStream attachment = attachmentMapper.get(blobId);
-        assertThat(IOUtils.toString(attachment, Charsets.UTF_8)).isEqualTo(expected);
+        Attachment actual = attachmentMapper.get(blobId);
+        String actualContentAsString = IOUtils.toString(actual.getContent().getInputStream(), Charsets.UTF_8);
+        assertThat(actualContentAsString).isEqualTo(expectedContent);
     }
 
     @Test
     public void getShouldWork() throws IOException {
         // Given
-        String blobId = "blobId";
-        String expected = "content";
-
-        attachmentMapper.add(blobId, IOUtils.toInputStream(expected, Charsets.UTF_8));
+        String expectedContent = "content";
+        InMemoryAttachmentId blobId = InMemoryAttachmentId.of(1);
+        saveAsNewAttachment(blobId, expectedContent);
 
         // When
-        InputStream attachment = attachmentMapper.get(blobId);
+        Attachment actual = attachmentMapper.get(blobId);
+        String actualContentAsString = IOUtils.toString(actual.getContent().getInputStream(), Charsets.UTF_8);
 
         // Then
-        assertThat(IOUtils.toString(attachment, Charsets.UTF_8)).isEqualTo(expected);
+        assertThat(actualContentAsString).isEqualTo(expectedContent);
     }
 
     @Test
     public void deleteShouldWork() throws IOException {
         // Given
-        String blobId = "blobId";
-        String expected = "content";
-
-        attachmentMapper.add(blobId, IOUtils.toInputStream(expected, Charsets.UTF_8));
+        String expectedContent = "content";
+        final InMemoryAttachmentId blobId = InMemoryAttachmentId.of(1);
+        saveAsNewAttachment(blobId, expectedContent);
 
         // When
-        attachmentMapper.remove(blobId);
+        attachmentMapper.delete(blobId);
 
         // Then
-        assertThat(attachmentMapper.get(blobId)).isNull();
+        try {
+            attachmentMapper.get(blobId);
+            fail("Should have thrown while accessing removed item !");
+        }
+        catch(IllegalArgumentException e) {
+        }
     }
+
+    private void saveAsNewAttachment(AttachmentId blobId, String expectedContent) {
+        Content content = new ByteContent(expectedContent.getBytes(Charsets.UTF_8));
+        Attachment newAttachment = new SimpleAttachment(blobId, content);
+        attachmentMapper.put(newAttachment);
+    }
+
+    @Test
+    public void deleteShouldNotThrowWhenAttachmentIdNotFound() {
+        InMemoryAttachmentId blobId = InMemoryAttachmentId.of(-1);
+        attachmentMapper.delete(blobId);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void getShouldThrowWhenAttachmentIdNotFound() {
+        InMemoryAttachmentId blobId = InMemoryAttachmentId.of(-1);
+        attachmentMapper.get(blobId);
+    }
+
+    @Test(expected = NullArgumentException.class)
+    public void deleteShouldThrowWhenIdIsNull() {
+        attachmentMapper.delete(null);
+    }
+
+    @Test(expected = NullArgumentException.class)
+    public void getShouldThrowWhenIdIsNull() {
+        attachmentMapper.get(null);
+    }
+
+    public static class InMemoryAttachmentId implements AttachmentId {
+
+        public static InMemoryAttachmentId of(long value) {
+            return new InMemoryAttachmentId(value);
+        }
+
+        private final long value;
+
+        private InMemoryAttachmentId(long value) {
+            this.value = value;
+        }
+
+        @Override
+        public String serialize() {
+            return String.valueOf(value);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            InMemoryAttachmentId that = (InMemoryAttachmentId) o;
+            return value == that.value;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(value);
+        }
+    }
+
 }
