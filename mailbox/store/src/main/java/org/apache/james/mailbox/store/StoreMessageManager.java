@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.UUID;
 
 import javax.mail.Flags;
 import javax.mail.Flags.Flag;
@@ -70,7 +69,7 @@ import org.apache.james.mailbox.store.mail.MessageMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper.FetchType;
 import org.apache.james.mailbox.store.mail.MessageMapperFactory;
 import org.apache.james.mailbox.store.mail.model.Attachment;
-import org.apache.james.mailbox.store.mail.model.AttachmentId;
+import org.apache.james.mailbox.store.mail.model.AttachmentBlobId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
 import org.apache.james.mailbox.store.mail.model.MailboxMessage;
@@ -390,7 +389,7 @@ public class StoreMessageManager<Id extends MailboxId> implements org.apache.jam
                 @Override
                 public Long execute() throws MailboxException {
                     MessageMetaData data = appendMessageToStore(message, mailboxSession);
-                    addAttachmentstoStore(attachments, mailboxSession);
+                    addAttachmentsToStore(attachments, mailboxSession);
 
                     SortedMap<Long, MessageMetaData> uids = new TreeMap<Long, MessageMetaData>();
                     uids.put(data.getUid(), data);
@@ -421,33 +420,11 @@ public class StoreMessageManager<Id extends MailboxId> implements org.apache.jam
 
     }
 
-    protected void addAttachmentstoStore(Iterable<Content> attachments, MailboxSession mailboxSession) {
+    protected void addAttachmentsToStore(Iterable<Content> attachments, MailboxSession mailboxSession) {
         AttachmentMapper attachmentMapper = getAttachmentMapper(mailboxSession);
         for (Content attachment : attachments) {
             Attachment newAttachment = new SimpleAttachment(AttachmentBlobId.getNewId(), attachment);
             attachmentMapper.put(newAttachment);
-        }
-    }
-
-    private static class AttachmentBlobId implements AttachmentId {
-
-        private final UUID id;
-
-        public static AttachmentId getNewId() {
-            return new AttachmentBlobId(UUID.randomUUID());
-        }
-
-        public static AttachmentId of(String blobId) {
-            return new AttachmentBlobId(UUID.fromString(blobId));
-        }
-
-        private AttachmentBlobId(UUID id) {
-            this.id = id;
-        }
-
-        @Override
-        public String serialize() {
-            return id.toString();
         }
     }
 
@@ -655,7 +632,6 @@ public class StoreMessageManager<Id extends MailboxId> implements org.apache.jam
 
     protected MessageMetaData appendMessageToStore(final MailboxMessage<Id> message, MailboxSession session) throws MailboxException {
         final MessageMapper<Id> mapper = mapperFactory.getMessageMapper(session);
-
         return mapperFactory.getMessageMapper(session).execute(new Mapper.Transaction<MessageMetaData>() {
 
             public MessageMetaData run() throws MailboxException {

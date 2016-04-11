@@ -28,12 +28,12 @@ import static org.apache.james.mailbox.cassandra.table.CassandraAttachmentTable.
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.MissingResourceException;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.NullArgumentException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
+import org.apache.james.mailbox.store.mail.AttachmentBlobNotFoundException;
 import org.apache.james.mailbox.store.mail.model.Attachment;
 import org.apache.james.mailbox.store.mail.model.AttachmentId;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleAttachment;
@@ -43,6 +43,7 @@ import org.apache.james.mailbox.store.transaction.Mapper;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 
 public class CassandraAttachmentMapper implements AttachmentMapper, Mapper {
@@ -65,14 +66,14 @@ public class CassandraAttachmentMapper implements AttachmentMapper, Mapper {
 
     @Override
     public Attachment get(AttachmentId blobId) {
-        assertIdIsNotNull(blobId);
+        Preconditions.checkNotNull(blobId);
         ResultSet resultSet = session.execute(
                 select(BLOB)
                     .from(TABLE_NAME)
                     .where(eq(ID, blobId.serialize()))
                 );
         if (resultSet.isExhausted()) {
-            throw new IllegalArgumentException("blobId");
+            throw new AttachmentBlobNotFoundException(blobId);
         } else {
             return new SimpleAttachment(blobId, new ByteContent(resultSet.one().getBytes(BLOB).array()));
         }
@@ -97,16 +98,10 @@ public class CassandraAttachmentMapper implements AttachmentMapper, Mapper {
 
     @Override
     public void delete(AttachmentId blobId) {
-        assertIdIsNotNull(blobId);
+        Preconditions.checkNotNull(blobId);
         session.execute(
                 QueryBuilder.delete()
                     .from(TABLE_NAME)
                     .where(eq(ID, blobId.serialize())));
-    }
-
-    private void assertIdIsNotNull(AttachmentId blobId) {
-        if (blobId == null) {
-            throw new NullArgumentException("blobId");
-        }
     }
 }

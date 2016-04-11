@@ -29,6 +29,8 @@ import org.apache.james.mailbox.store.mail.model.Attachment;
 import org.apache.james.mailbox.store.mail.model.AttachmentId;
 import org.apache.james.mailbox.store.transaction.Mapper;
 
+import com.google.common.base.Preconditions;
+
 public class InMemoryAttachmentMapper implements AttachmentMapper, Mapper {
 
     private static final int INITIAL_SIZE = 64;
@@ -50,7 +52,7 @@ public class InMemoryAttachmentMapper implements AttachmentMapper, Mapper {
 
     @Override
     public Attachment get(AttachmentId blobId) {
-        assertIdIsNotNull(blobId);
+        Preconditions.checkNotNull(blobId);
         if (!attachmentsById.containsKey(blobId))
             throw new IllegalArgumentException("blobId");
         return attachmentsById.get(blobId);
@@ -59,7 +61,7 @@ public class InMemoryAttachmentMapper implements AttachmentMapper, Mapper {
     @Override
     public void put(Attachment attachment) {
         AttachmentId id = attachment.getId();
-        assertIdIsNotNull(id);
+        Preconditions.checkNotNull(id);
         if (attachmentsById.containsKey(id)) {
             attachmentsById.remove(attachment);
         }
@@ -68,15 +70,9 @@ public class InMemoryAttachmentMapper implements AttachmentMapper, Mapper {
 
     @Override
     public void delete(AttachmentId blobId) {
-        assertIdIsNotNull(blobId);
+        Preconditions.checkNotNull(blobId);
         if (attachmentsById.containsKey(blobId)) {
             attachmentsById.remove(blobId);
-        }
-    }
-
-    private void assertIdIsNotNull(AttachmentId blobId) {
-        if (blobId == null) {
-            throw new NullArgumentException("blobId");
         }
     }
 }

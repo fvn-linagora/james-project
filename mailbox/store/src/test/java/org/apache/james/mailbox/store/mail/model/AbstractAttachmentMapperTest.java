@@ -28,6 +28,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.NullArgumentException;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.model.Content;
+import org.apache.james.mailbox.store.mail.AttachmentBlobNotFoundException;
 import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.model.impl.SimpleAttachment;
 import org.apache.james.mailbox.store.streaming.ByteContent;
@@ -109,9 +110,9 @@ public abstract class AbstractAttachmentMapperTest<Id extends MailboxId> {
         // Then
         try {
             attachmentMapper.get(blobId);
-            fail("Should have thrown while accessing removed item !");
+            fail("Should have thrown AttachmentBlobNotFoundException while accessing removed item !");
         }
-        catch(IllegalArgumentException e) {
+        catch(AttachmentBlobNotFoundException e) {
         }
     }
 
@@ -127,7 +128,7 @@ public abstract class AbstractAttachmentMapperTest<Id extends MailboxId> {
         attachmentMapper.delete(blobId);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = AttachmentBlobNotFoundException.class)
     public void getShouldThrowWhenAttachmentIdNotFound() {
         InMemoryAttachmentId blobId = InMemoryAttachmentId.of(-1);
         attachmentMapper.get(blobId);
@@ -162,8 +163,12 @@ public abstract class AbstractAttachmentMapperTest<Id extends MailboxId> {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
             InMemoryAttachmentId that = (InMemoryAttachmentId) o;
             return value == that.value;
         }
