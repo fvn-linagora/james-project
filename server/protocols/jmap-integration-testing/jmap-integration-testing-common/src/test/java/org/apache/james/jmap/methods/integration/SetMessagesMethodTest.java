@@ -23,6 +23,7 @@ import static com.jayway.restassured.RestAssured.given;
 import static com.jayway.restassured.RestAssured.with;
 import static com.jayway.restassured.config.EncoderConfig.encoderConfig;
 import static com.jayway.restassured.config.RestAssuredConfig.newConfig;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.endsWith;
@@ -59,7 +60,6 @@ import com.google.common.base.Charsets;
 import com.jayway.awaitility.Awaitility;
 import com.jayway.awaitility.Duration;
 import com.jayway.awaitility.core.ConditionFactory;
-import com.jayway.awaitility.core.ConditionTimeoutException;
 import com.jayway.restassured.RestAssured;
 import com.jayway.restassured.builder.ResponseSpecBuilder;
 import com.jayway.restassured.http.ContentType;
@@ -1347,7 +1347,7 @@ public abstract class SetMessagesMethodTest {
     }
 
 
-    @Test(expected = ConditionTimeoutException.class)
+    @Test
     public void setMessagesWhenSavingToDraftsShouldNotSendMessage() throws Exception {
         // Sender
         jmapServer.serverProbe().createMailbox(MailboxConstants.USER_NAMESPACE, username, "sent");
@@ -1396,7 +1396,8 @@ public abstract class SetMessagesMethodTest {
                 .post("/jmap");
 
         // Then
-        calmlyAwait.atMost(3, TimeUnit.SECONDS).until( () -> isAnyMessageFoundInRecipientsMailboxes(recipientToken));
+        Thread.sleep(TimeUnit.SECONDS.toMillis(3));
+        assertThat(isAnyMessageFoundInRecipientsMailboxes(recipientToken)).isFalse();
     }
 
 
