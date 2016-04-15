@@ -126,7 +126,7 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
 
     private Mailbox<Id> getOutbox(MailboxSession mailboxSession) {
         Role outbox = Role.OUTBOX;
-        return systemMailboxesProvider.getStreamOfMailboxesFromRole(outbox, mailboxSession).findFirst()
+        return systemMailboxesProvider.listMailboxes(outbox, mailboxSession).findFirst()
                 .orElseThrow(() -> new MailboxRoleNotFoundException(outbox));
     }
 
@@ -145,13 +145,13 @@ public class SetMessagesCreationProcessor<Id extends MailboxId> implements SetMe
     private boolean isRequestForSending(CreationMessage messageWithId, MailboxSession session,
                                         Predicate<CreationMessage> validMessagesTester) {
         Predicate<Mailbox<Id>> isMessageCreatedInOutbox = box -> messageWithId.getMailboxIds().contains(box.getMailboxId().serialize());
-        boolean isMessageSetInOutbox = systemMailboxesProvider.getStreamOfMailboxesFromRole(Role.OUTBOX, session)
+        boolean isMessageSetInOutbox = systemMailboxesProvider.listMailboxes(Role.OUTBOX, session)
                 .anyMatch(isMessageCreatedInOutbox);
         return validMessagesTester.test(messageWithId) && isMessageSetInOutbox;
     }
 
     private Predicate<CreationMessage> getIsMessageSetInDraftPredicate(MailboxSession mailboxSession) {
-        Optional<Id> draftsId = systemMailboxesProvider.getStreamOfMailboxesFromRole(Role.DRAFTS, mailboxSession)
+        Optional<Id> draftsId = systemMailboxesProvider.listMailboxes(Role.DRAFTS, mailboxSession)
                 .map(Mailbox::getMailboxId)
                 .findFirst();
         return creationMessage -> draftsId

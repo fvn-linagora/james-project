@@ -27,5 +27,5 @@ import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MailboxId;
 
 public interface SystemMailboxesProvider<Id extends MailboxId> {
-    Stream<Mailbox<Id>> getStreamOfMailboxesFromRole(Role aRole, MailboxSession session);
+    Stream<Mailbox<Id>> listMailboxes(Role aRole, MailboxSession session);
 }

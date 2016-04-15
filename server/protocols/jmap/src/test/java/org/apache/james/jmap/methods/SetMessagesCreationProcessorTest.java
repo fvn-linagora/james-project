@@ -267,7 +267,7 @@ public class SetMessagesCreationProcessorTest {
             this.draftsSupplier = draftsSupplier;
         }
 
-        public Stream<Mailbox<TestId>> getStreamOfMailboxesFromRole(Role aRole, MailboxSession session) {
+        public Stream<Mailbox<TestId>> listMailboxes(Role aRole, MailboxSession session) {
             if (aRole.equals(Role.OUTBOX)) {
                 return outboxSupplier.get().map(o -> Stream.of(o)).orElse(Stream.empty());
             } else if (aRole.equals(Role.DRAFTS)) {

@@ -56,11 +56,11 @@ public class SystemMailboxesProviderImpl<Id extends MailboxId> implements System
                 .orElse(false);
     }
 
-    public Stream<Mailbox<Id>> getStreamOfMailboxesFromRole(Role aRole, MailboxSession session) {
+    public Stream<Mailbox<Id>> listMailboxes(Role aRole, MailboxSession session) {
         ThrowingSupplier<List<MailboxMetaData>> getAllMailboxes = () -> mailboxManager.search(MailboxQuery.builder(session).privateUserMailboxes().build(), session);
         Predicate<MailboxPath> hasSpecifiedRole = path -> hasRole(aRole, path);
         return getAllMailboxes.get().stream()
-                .map(MailboxMetaData::getPath)
+        .map(MailboxMetaData::getPath)
                 .filter(hasSpecifiedRole)
                 .map(loadMailbox(session));
     }
