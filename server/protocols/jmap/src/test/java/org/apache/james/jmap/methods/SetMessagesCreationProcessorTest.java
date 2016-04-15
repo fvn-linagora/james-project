@@ -82,7 +82,7 @@ public class SetMessagesCreationProcessorTest {
             .id(MessageId.of(OUTBOX_MESSAGE_ID))
             .blobId("anything")
             .threadId("anything")
-            .mailboxIds(OUTBOX_ID.serialize())
+            .mailboxId(OUTBOX_ID.serialize())
             .headers(ImmutableMap.of())
             .subject("anything")
             .size(0)

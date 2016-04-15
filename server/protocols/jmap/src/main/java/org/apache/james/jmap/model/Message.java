@@ -21,7 +21,6 @@ package org.apache.james.jmap.model;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -234,8 +233,8 @@ public class Message {
             return this;
         }
 
-        public Builder mailboxIds(String... mailboxIds) {
-            return mailboxIds(Arrays.asList(mailboxIds));
+        public Builder mailboxId(String mailboxId) {
+            return this.mailboxIds(ImmutableList.of(mailboxId));
         }
 
         public Builder mailboxIds(List<String> mailboxIds) {
